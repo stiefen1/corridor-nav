@@ -26,6 +26,10 @@ Install SeaCharts by running:
 ```bash
 pip install -e submodules/seacharts_ais
 ```
+## Install corridor-nav
+```bash
+pip install -e .
+```
 
 ## Test
 Run ```examples/test_installation.py```
