@@ -1,3 +1,6 @@
 [submodule "submodules/pso"]
 	path = submodules/pso
 	url = https://github.com/stiefen1/pso.git
+[submodule "submodules/seacharts_ais"]
+	path = submodules/seacharts_ais
+	url = https://github.com/stiefen1/seacharts_ais.git
