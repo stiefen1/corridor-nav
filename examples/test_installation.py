@@ -1,6 +1,9 @@
 import os, numpy as np
 from seacharts.enc import ENC
 from pso import PSO, CostBase
+from corridor_opt import Rectangle
+from decision_making import *
+import matplotlib.pyplot as plt
 
 class QuadOpt(CostBase):
     def eval(self, x:float, y:float, *args, **kwargs) -> float:
@@ -32,3 +35,9 @@ config_path = os.path.join('src', 'corridor_opt', 'config', 'trondelag_1.yaml')
 enc = ENC(config_path)
 enc.display.start()
 enc.display.show()
+enc.display.close()
+
+r = Rectangle(10, 5, 20, 5).rotate(30)
+ax = r.plot()
+ax.set_aspect('equal')
+plt.show()
