@@ -37,7 +37,10 @@ enc.display.start()
 enc.display.show()
 enc.display.close()
 
+# Shows a Rectangle object 
 r = Rectangle(10, 5, 20, 5).rotate(30)
 ax = r.plot()
 ax.set_aspect('equal')
 plt.show()
+
+print(f"\nYou did it! It works!")
