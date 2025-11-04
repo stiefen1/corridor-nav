@@ -8,7 +8,7 @@ from corridor_opt.extract_shoreline import get_obstacles_in_window
 from seacharts.enc import ENC
 import sys, os, pathlib, networkx as nx, matplotlib.pyplot as plt
 
-sys.setrecursionlimit(2000)
+sys.setrecursionlimit(2000) # Required to explore nodes of the graph
 
 enc_config = os.path.join('config', 'kristiansund.yaml')
 path_to_graph = os.path.join(pathlib.Path(__file__).parent, 'output', 'graph.pkl')
