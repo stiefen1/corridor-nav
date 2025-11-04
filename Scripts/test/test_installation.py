@@ -35,7 +35,7 @@ plt.show()
 plt.close()
 
 # SeaCharts ENC
-config_path = os.path.join('config', 'kristiansund_corridors.yaml')
+config_path = os.path.join('config', 'hitra.yaml')
 enc = ENC(config_path)
 enc.display.start()
 enc.display.show()

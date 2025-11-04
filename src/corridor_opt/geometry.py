@@ -93,7 +93,7 @@ class GeometryWrapper:
     def translate_inplace(self, x: float, y: float, **kwargs) -> None:
         self._geometry = affinity.translate(self._geometry, x, y, **kwargs)
     
-    def rotate(self, angle: float, origin=None, **kwargs) -> Any:
+    def rotate(self, angle: float, origin=None, **kwargs) -> "GeometryWrapper":
         """
         Rotation in degrees by default. For radians set use_radians=True
         """

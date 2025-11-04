@@ -1,0 +1,14 @@
+enc:
+  size: [ 30000, 30000 ] # meters
+  center: [140000, 7009000] # Lat/Lon: [63.03, 7.87] -> # ROI: bottom left=(62.88, 7.61) | top right=(63.17, 8.13) 
+  depths: [ 0, 1, 2, 5, 10, 20, 50, 100, 200, 350, 500 ]
+  crs: "UTM33N"
+  resources: [ "data/db/" ]
+
+display:
+  colorbar: False
+  dark_mode: True
+  fullscreen: False
+  resolution: 720
+  anchor: "center"
+  dpi: 96

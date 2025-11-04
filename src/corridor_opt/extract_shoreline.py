@@ -73,7 +73,12 @@ if __name__ == "__main__":
     plt.show()
     plt.close()
 
-    config_path = os.path.join('config', 'trondelag_corridors.yaml')
+    config_path = os.path.join('config', 'kristiansund_corridors.yaml')
     enc = ENC(config_path)
-    enc.display.start()
-    enc.display.show()
+    obstacles = get_obstacles_in_window(enc, depth=5)
+    ax = None
+    for obs in obstacles:
+        ax = obs.plot(ax=ax)
+        obs.fill(ax=ax, c='green')
+    ax.set_aspect('equal')
+    plt.show()
