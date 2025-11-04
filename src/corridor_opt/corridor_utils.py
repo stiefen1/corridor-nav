@@ -1,8 +1,8 @@
 from shapely import LineString
-from .obstacle import Obstacle, Rectangle
+from corridor_opt.obstacle import Obstacle, Rectangle
 import numpy as np
 from typing import Dict
-from .math_utils import normalize_angle_0_2pi
+from corridor_opt.math_utils import normalize_angle_0_2pi
 
 
 def get_rectangle_from_progression_and_width(edge:LineString, progression:float, width:float, margin:float=0.1) -> Rectangle:

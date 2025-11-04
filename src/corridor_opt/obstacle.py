@@ -1,5 +1,5 @@
 from shapely import Polygon, Point
-from .geometry import GeometryWrapper
+from corridor_opt.geometry import GeometryWrapper
 from typing import Tuple
 from shapely import affinity
 import numpy as np

@@ -1,8 +1,7 @@
 
 if __name__ == "__main__":
     import os
-    from seacharts.enc import ENC
-    from .obstacle import Rectangle
+    from corridor_opt.obstacle import Rectangle
     import matplotlib.pyplot as plt
 
     r = Rectangle(10, 0, 10, 3).rotate(30)

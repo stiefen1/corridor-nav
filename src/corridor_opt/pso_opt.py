@@ -2,8 +2,8 @@ from pso.cost import CostBase
 from shapely import LineString
 import numpy as np
 from typing import List
-from .obstacle import Obstacle
-from .corridor_utils import get_bend_obstacle
+from corridor_opt.obstacle import Obstacle
+from corridor_opt.corridor_utils import get_bend_obstacle
 
 class CorridorCostProgAndBendRadius(CostBase):
     def __init__(
