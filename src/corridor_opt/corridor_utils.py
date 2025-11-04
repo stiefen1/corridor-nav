@@ -1,7 +1,7 @@
 from shapely import LineString
 from corridor_opt.obstacle import Obstacle, Rectangle
 import numpy as np
-from typing import Dict
+from typing import Dict, List
 from corridor_opt.math_utils import normalize_angle_0_2pi
 
 
@@ -54,6 +54,7 @@ def get_bend(edge:LineString, prog:float, width:float, edge_prev:LineString, wid
     # Check if direction vectors are parallel
     det = direction_prev[0] * (-direction[1]) - direction_prev[1] * (-direction[0])
     if abs(det) < 1e-6: # Parallel lines, no intersection
+        print("det < 1e-6")
         return None
     
     # Intersection
@@ -83,6 +84,7 @@ def get_bend(edge:LineString, prog:float, width:float, edge_prev:LineString, wid
     # print(d, gamma, r_prev.height, r.height, margin)
     # print(d * np.cos(gamma/2), min(r_prev.height, r.height) + margin)
     if d * np.cos(gamma/2) > min(r_prev.height, r.height) - margin:
+        print("Radius and turn angle are inconsistent with rectange height")
         return None
     
     # Arc parameters
@@ -131,9 +133,9 @@ def get_bend(edge:LineString, prog:float, width:float, edge_prev:LineString, wid
             'orientation': orient
     }
 
-def get_bend_obstacle(edge:LineString, prog:float, width:float, edge_prev:LineString=None, width_prev:float=None, margin:float=0.3, radius:float=None):
+def get_bend_obstacle(edge:LineString, prog:float, width:float, edge_prev: LineString | None = None, width_prev: float | None = None, margin:float=0.3, radius:float=None):
     """Calculate all the bend geometry based on current waypoints"""
-    if edge_prev is None:
+    if edge_prev is None or width_prev is None:
         return get_rectangle_from_progression_and_width(edge, prog, width, margin=margin)
     
     # Get bend: if not valid then return None
@@ -147,3 +149,52 @@ def get_bend_obstacle(edge:LineString, prog:float, width:float, edge_prev:LineSt
         corridor_with_bend = np.hstack([bend['p1_lower_right'], bend['inner_arc'], bend['p2_upper_right'], bend['p2_upper_left'], bend['outter_arc'], bend['p1_lower_left'], bend['p1_lower_right']])
 
     return Obstacle(zip(*corridor_with_bend.tolist()))
+
+def merge_list_of_corridors_with_bend(edges:List[LineString], prev_edges:List[LineString], progs:List[float], widths:List[float], margin:float=0.3, list_of_radius:List[float] | None = None) -> Obstacle:
+    """
+    It is a bit stupid: 
+    edges are the complete edge from anchor to end point
+    prev_edges are just the edge covered by each corridor.
+    """
+    if len(edges) < 1:
+        return None
+    elif len(edges) == 1:
+        return get_rectangle_from_progression_and_width(edges[0], progs[0], widths[0], margin=margin)
+
+    # First corridor
+    edge, prog, width = edges[0], progs[0], widths[0]
+    r0 = get_rectangle_from_progression_and_width(edge, prog, width, margin=margin)
+    merged_corridors_left = [
+        r0.lower_left_corner[:, None]
+    ]
+    merged_corridors_right = [
+        r0.lower_right_corner[:, None]
+    ]
+
+    for i in range(1, len(edges)):
+        # Retrieve actual and previous bend data
+        edge, prog, width = edges[i], progs[i], widths[i]
+        edge_prev, width_prev = prev_edges[i-1], widths[i-1]
+
+        if list_of_radius is not None:
+            bend = get_bend(edge, prog, width, edge_prev, width_prev, margin=margin, radius=list_of_radius[i])
+        else:
+            bend = get_bend(edge, prog, width, edge_prev, width_prev, margin=margin)
+
+        if bend is None:
+            raise TypeError(f"bend is invalid: idx {i} with width={width}, margin={margin}, radius={list_of_radius[i]}")
+
+        # Stitch shapes
+        if bend['orientation'] > 0: # bend to the left
+            merged_corridors_left.insert(0, bend['inner_arc'])
+            merged_corridors_right.append(bend['outter_arc'])
+        else:
+            merged_corridors_left.insert(0, bend['outter_arc'])
+            merged_corridors_right.append(bend['inner_arc'])
+
+    rf = get_rectangle_from_progression_and_width(edge, prog, width, margin=margin)
+    merged_corridors_left.insert(0, rf.upper_left_corner[:, None])
+    merged_corridors_right.append(rf.upper_right_corner[:, None])
+    corridors_with_bend = np.hstack(merged_corridors_right+merged_corridors_left)
+    return Obstacle(zip(*corridors_with_bend.tolist()))
+

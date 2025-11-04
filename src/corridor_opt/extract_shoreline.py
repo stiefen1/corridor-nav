@@ -42,8 +42,8 @@ def get_obstacles_in_window(enc: ENC, center: Tuple | None = None, size: Tuple |
             list_of_polygons = [seabed.geometry] if isinstance(seabed.geometry, Polygon) else list(seabed.geometry.geoms)
             for polygon in list_of_polygons:
                 multi_diff = intersection(difference(window_complete, polygon), window_focus) # We make sure that the resulting polygon is both part of enc and focus regions
-                if intersection_window_area != 0:
-                    print(f"{intersection_window_area:.0f}, {multi_diff.area:.0f}, {multi_diff.area/intersection_window_area:.3f}")
+                # if intersection_window_area != 0:
+                #     print(f"{intersection_window_area:.0f}, {multi_diff.area:.0f}, {multi_diff.area/intersection_window_area:.3f}")
                 if 0.99*intersection_window_area <= multi_diff.area: # For some reasons, window_focus is sometimes the result of it
                         continue
                 
