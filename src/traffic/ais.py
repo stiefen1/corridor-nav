@@ -123,7 +123,6 @@ def snapshot_records(token, aoi_poly, T, delta_min):
             if not aoi_prepared.contains(Point(float(lon), float(lat))):
                 continue
             records.append(p)
-    print(records)
     return records
 
 def plot_positions(records: List[dict]):
