@@ -31,7 +31,7 @@ best_cost = optimizer.get_optimal_cost()
 print(f"Optimal particle: {best_position.tolist()}, Optimal cost: {best_cost:.2f}")
 
 # SeaCharts ENC
-config_path = os.path.join('src', 'corridor_opt', 'config', 'trondelag_1.yaml')
+config_path = os.path.join('config', 'kristiansund_corridors.yaml')
 enc = ENC(config_path)
 enc.display.start()
 enc.display.show()

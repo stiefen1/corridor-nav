@@ -11,7 +11,7 @@ if __name__ == "__main__":
     plt.show()
     plt.close()
 
-    config_path = os.path.join('src', 'corridor_opt', 'config', 'trondelag_1.yaml')
+    config_path = os.path.join('config', 'trondelag_corridors.yaml')
     enc = ENC(config_path)
     enc.display.start()
     enc.display.show()
