@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 class QuadOpt(CostBase):
     def eval(self, x:float, y:float, *args, **kwargs) -> float:
-        return np.min([(x+3)**2 + (y+3)**2, (x-3)**2 + (y-3)**2])
+        return np.min([(x+3)**2 + (y+3)**2 - 1, (x-3)**2 + (y-3)**2])
 
 # Create PSO optimizer
 optimizer = PSO(
@@ -28,7 +28,11 @@ optimizer.optimize()
 # Get PSO results
 best_position = optimizer.get_optimal_position()
 best_cost = optimizer.get_optimal_cost()
-print(f"Optimal particle: {best_position.tolist()}, Optimal cost: {best_cost:.2f}")
+axs = optimizer.swarm.plot_cost_and_particles(grid_dim=(300, 300), total=True)
+axs[0].set_title(f"Optimal particle: {best_position[0]:.1f}, {best_position[1]:.1f}, Optimal cost: {best_cost:.2f}")
+plt.tight_layout()
+plt.show()
+plt.close()
 
 # SeaCharts ENC
 config_path = os.path.join('config', 'kristiansund_corridors.yaml')
@@ -43,4 +47,4 @@ ax = r.plot()
 ax.set_aspect('equal')
 plt.show()
 
-print(f"\nYou did it! It works!")
+print(f"\nYou did it! It works!\n")
