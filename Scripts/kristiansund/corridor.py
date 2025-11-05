@@ -13,16 +13,17 @@ sys.setrecursionlimit(2000) # Required to explore nodes of the graph
 enc_config = os.path.join('config', 'kristiansund.yaml')
 path_to_graph = os.path.join(pathlib.Path(__file__).parent, 'output', 'graph.pkl')
 pso_params = {
-    'n_particles': 40,
+    'n_particles': 50,
     'max_iter': 100,
     'inertia': 0.5,
     'c_cognitive': 0.2,
     'c_social': 0.5
     }
 corridor_params = {
-    'distance_margin': 100,
+    'distance_margin': 10,
     'min_corridor_width': 100,
-    'max_corridor_width': 2000
+    'max_corridor_width': 1000,
+    'length_margin': 100, 
 }
 
 
@@ -37,7 +38,7 @@ obstacles = get_obstacles_in_window(enc, depth=5)
 
 # Convert graph edges into linestring object
 assert graph is not None, f"Failed to load graph using path {path_to_graph}."
-edges_as_linestring = get_edges_as_linestring(graph)
+edges_as_linestring, ids = get_edges_as_linestring(graph)
 
 # Build corridors
 corridors = build_corridors_graph(edges_as_linestring, obstacles, **pso_params, **corridor_params)

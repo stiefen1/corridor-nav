@@ -28,7 +28,7 @@ def next_node(graph:nx.Graph, node, main_node_start, main_nodes, prev_nodes=[], 
             return next_node(graph, neighbor, main_node_start, main_nodes, prev_nodes=prev_nodes+[neighbor], i=i+1)
     return [], None, 0
 
-def get_edges_as_linestring(graph:nx.Graph, verbose=False) -> List[LineString]:
+def get_edges_as_linestring(graph:nx.Graph, verbose=False) -> Tuple[ List[LineString], List[Tuple[int, int]]]:
     """
     Returns a list of resampled edges. Each resampled edge is a numpy array of evenly spaced points. 
     """
@@ -63,7 +63,7 @@ def get_edges_as_linestring(graph:nx.Graph, verbose=False) -> List[LineString]:
                 list_of_intermediate_nodes.append(graph.nodes[main_node_final]["pos"])
                 edges_as_linestring.append(LineString(list_of_intermediate_nodes))
                 combinations.append((main_node_final, main_node))
-    return edges_as_linestring
+    return edges_as_linestring, combinations
 
 def get_min_distances_to_edges(edges_as_linestring:List[LineString], obstacles:List[Obstacle]) -> List[float]:
     distances = []

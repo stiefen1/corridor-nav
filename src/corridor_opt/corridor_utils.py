@@ -1,200 +1,102 @@
-from shapely import LineString
+from shapely import LineString, Polygon
 from corridor_opt.obstacle import Obstacle, Rectangle
 import numpy as np
-from typing import Dict, List
-from corridor_opt.math_utils import normalize_angle_0_2pi
+from typing import Dict, List, Tuple
+from corridor_opt.math_utils import normalize_angle_0_2pi, normalize_angle_0_pi, rotation_matrix
 
-
-def get_rectangle_from_progression_and_width(edge:LineString, progression:float, width:float, margin:float=0.1) -> Rectangle:
+def get_rectangle_and_bend_from_progression_and_width(edge: LineString, progression: float, width: float, edge_prev: LineString | None = None, length_margin: float = 0.1, n_radius_approx: int = 10, width_margin: float = 0.0) -> Tuple[Rectangle, Obstacle] | None:
     """
-    rectangle starting from edge.interpolate(0) to edge.interpolate(progression) with a given width. margin is the additional length
-    on each side of the rectangle, meaning the final rectange length will be || edge.interpolate(progression) - edge.interpolate(0) || + 2*margin
+    Return rectangle alone as well as an obstacle combining rectangle with appropriate bend if geometry is valid.
+    Returns None if geometry is invalid.
     """
-    start = np.array(edge.interpolate(0).xy).squeeze()
-    stop = np.array(edge.interpolate(progression, normalized=True).xy).squeeze()
-    length = np.linalg.norm(stop-start) + 2*margin
-    angle = np.atan2(start[0]-stop[0], stop[1]-start[1])
-    return Rectangle(*(start + np.array([0, length/2-margin])), length, width).rotate(angle, start, use_radians=True)
-
-
-def get_bend(edge:LineString, prog:float, width:float, edge_prev:LineString, width_prev:float, margin:float=0.3, radius: float | None = None) -> Dict:
-    # Get rectangles
-    r_prev = get_rectangle_from_progression_and_width(edge_prev, progression=1, width=width_prev, margin=margin)
-    r = get_rectangle_from_progression_and_width(edge, progression=prog, width=width, margin=margin)
-
-    # Extract corners of interest
-    p1_lower_right = r_prev.lower_right_corner[:, None]
-    p1_lower_left = r_prev.lower_left_corner[:, None]
-    p2_upper_right = r.upper_right_corner[:, None]
-    p2_upper_left = r.upper_left_corner[:, None]
+    assert width > width_margin, f"width must be greater than width_margin. Got width={width:.1f} <= {width_margin:.1f}"
+    joint_point = np.array(edge.interpolate(0).xy).squeeze()
+    end_point = np.array(edge.interpolate(progression, normalized=True).xy).squeeze()
+    dp = np.array(edge.interpolate(1e-3, normalized=True).xy).squeeze() - joint_point
+    start_point = joint_point - dp
+    # if edge_prev is None:
+    #     dp = np.array(edge.interpolate(1e-3, normalized=True).xy).squeeze() - joint_point
+    #     start_point = joint_point - dp
+    # else:
+    #     start_point = np.array(edge_prev.interpolate(0).xy).squeeze()
     
-    # Direction vectors
-    anchor_prev = np.array(edge_prev.interpolate(0).xy)
-    anchor = np.array(edge_prev.interpolate(1, normalized=True).xy)
-    direction_prev = anchor - anchor_prev
-    theta1 = np.atan2(direction_prev[0], direction_prev[1]).squeeze()
+    # direction vectors
+    direction_1 = joint_point - start_point
+    direction_2 = end_point - joint_point
+
+    # add margin to joint_point
+    # joint_point = joint_point - margin * direction_1 / np.linalg.norm(direction_1)
+
+    # angles
+    theta1 = np.atan2(direction_1[0], direction_1[1]).squeeze()
+    theta2 = np.atan2(direction_2[0], direction_2[1]).squeeze()
+
+    # radius & width
+    # radius = np.linalg.norm(end_point - joint_point) / 4 + width
+    radius = np.linalg.norm(end_point - joint_point) / 4 + 2*width # width
     
-    direction = np.array(edge.interpolate(prog, normalized=True).xy) - anchor
-    theta2 = np.atan2(direction[0], direction[1]).squeeze()
-    
-    # Normalize angles and determine orientation
+    # Normalize angle difference and determine orientation
     delta_normalized = normalize_angle_0_2pi(theta2-theta1)
-    theta1 = normalize_angle_0_2pi(theta1)
-    theta2 = normalize_angle_0_2pi(theta2)
-
     orient = -1 if 0 <= delta_normalized <= np.pi else 1
-    # idx = 1 if orient < 0 else 2
-    if orient < 0:
-        p1 = r_prev.lower_right_corner[:, None]
-        p2 = r.lower_right_corner[:, None]
+    ortho = np.array([direction_1[1], -direction_1[0]])
+    ortho_norm = np.linalg.norm(ortho)
+    if ortho_norm > 0:
+        orthonormal = orient * ortho / ortho_norm
     else:
-        p1 = r_prev.lower_left_corner[:, None]
-        p2 = r.lower_left_corner[:, None]
-    
-    # Check if direction vectors are parallel
-    det = direction_prev[0] * (-direction[1]) - direction_prev[1] * (-direction[0])
-    if abs(det) < 1e-6: # Parallel lines, no intersection
-        print("det < 1e-6")
         return None
     
-    # Intersection
-    s12 = np.linalg.inv(np.hstack([direction_prev, -direction])) @ (p2 - p1)
-    intersection = p1 + s12[0] * direction_prev
+    center = np.array(joint_point) - orthonormal * radius
+    start_inner_radius = center + orthonormal * (radius - (width-width_margin) / 2)
+    start_outer_radius = center + orthonormal * (radius + (width-width_margin) / 2)  
 
-    # Angles
-    theta_max = np.max([theta1, theta2])
-    theta_min = np.min([theta1, theta2])
-    delta_max_min = normalize_angle_0_2pi(theta_max - theta_min)
-    alpha = normalize_angle_0_2pi(np.pi - delta_max_min)
-    
-    # Compute L (distance from center of bend to intersection)
-    width_average = (width_prev + width)/2
-    radius =  radius or 2 * abs(-width_average * normalize_angle_0_2pi(theta2-theta1) / np.pi + width_average)
-    l = radius / np.cos((np.pi-alpha)/2)
-    
-    # Bend center direction vector
-    d_bend = -orient*np.array([np.sin(theta_max+alpha/2), np.cos(theta_max+alpha/2)])[:, None]
-    
-    # Center of bend
-    center: np.ndarray = intersection + l * d_bend
-    d = np.linalg.norm(anchor.flatten() - center.flatten())
-    gamma = min(normalize_angle_0_2pi(np.pi+theta1-theta2), normalize_angle_0_2pi(np.pi+theta2-theta1))
-    
-    # Length of corridors
-    # print(d, gamma, r_prev.height, r.height, margin)
-    # print(d * np.cos(gamma/2), min(r_prev.height, r.height) + margin)
-    if d * np.cos(gamma/2) > min(r_prev.height, r.height) - margin:
-        print("Radius and turn angle are inconsistent with rectange height")
-        return None
-    
-    # Arc parameters
-    if orient > 0:
-        if 0 <= theta1 <= np.pi: ### EVERYTHING WORKS HERE
-            if 0 <= theta2 <= np.pi:
-                central_angle =  normalize_angle_0_2pi(- theta2 + alpha/2 - np.pi)
-                theta1_arc_rad = ( central_angle + alpha/2 )
-                theta2_arc_rad = ( central_angle - alpha/2 + np.pi )
-            else:
-                central_angle = normalize_angle_0_2pi(- theta2 - alpha/2)
-                theta2_arc_rad = ( central_angle + alpha/2 )
-                theta1_arc_rad = ( central_angle - alpha/2 + np.pi )
-
-        else: ### EVERYTHING WORKS HERE
-            central_angle =  normalize_angle_0_2pi(- theta2 + alpha/2 - np.pi)
-            theta1_arc_rad = ( central_angle + alpha/2 )
-            theta2_arc_rad = ( central_angle - alpha/2 + np.pi )
+    d1 = np.linalg.norm(center-start_point)
+    d2 = np.linalg.norm(center-end_point)
+    if d1 > radius and d2 > radius:
+        alpha1 = np.asin(radius/d1)
+        alpha2 = np.asin(radius/d2)
     else:
-        if 0 <= theta1 <= np.pi: ### EVERYTHING WORKS HERE
-            central_angle = normalize_angle_0_2pi(- theta2 - alpha/2 - np.pi/2)
-            theta1_arc_rad = ( central_angle + alpha/2 - np.pi/2 )
-            theta2_arc_rad = ( central_angle - alpha/2 + np.pi/2 )
+        return None
 
-        else:
-            if 0 <= theta2 <= np.pi:
-                central_angle =  normalize_angle_0_2pi(- theta2 + alpha/2)
-                theta2_arc_rad = ( central_angle + alpha/2 )
-                theta1_arc_rad = ( central_angle - alpha/2 + np.pi )
-            else:
-                central_angle = normalize_angle_0_2pi(- theta2 - alpha/2 + np.pi)
-                theta1_arc_rad = ( central_angle + alpha/2 )
-                theta2_arc_rad = ( central_angle - alpha/2 + np.pi )
+    # vectors from vertices to center of rotation
+    direction_1_center = center - start_point
+    direction_2_center = end_point - center
 
-    # Build complete corridor shape
-    list_of_thetas = np.linspace(theta1_arc_rad, theta2_arc_rad, num=10)
-    inner_arc = np.fliplr(center + radius * np.array([np.cos(list_of_thetas), np.sin(list_of_thetas)]))
-    outter_arc = center + (radius+width_average) * np.array([np.cos(list_of_thetas), np.sin(list_of_thetas)])
-    return {
-            'p1_lower_right': p1_lower_right,
-            'p1_lower_left': p1_lower_left,
-            'p2_upper_right': p2_upper_right,
-            'p2_upper_left': p2_upper_left,
-            'inner_arc': inner_arc,
-            'outter_arc': outter_arc,
-            'orientation': orient
-    }
+    # angles
+    gamma1 = np.atan2(direction_1_center[0], direction_1_center[1]).squeeze()
+    gamma2 = np.atan2(direction_2_center[0], direction_2_center[1]).squeeze()
 
-def get_bend_obstacle(edge:LineString, prog:float, width:float, edge_prev: LineString | None = None, width_prev: float | None = None, margin:float=0.3, radius:float=None):
-    """Calculate all the bend geometry based on current waypoints"""
-    if edge_prev is None or width_prev is None:
-        return get_rectangle_from_progression_and_width(edge, prog, width, margin=margin)
-    
-    # Get bend: if not valid then return None
-    bend = get_bend(edge, prog, width, edge_prev, width_prev, margin=margin, radius=radius)
-    if bend is None:
+    # Compute alpha and check for validity
+    alpha = alpha1 + alpha2 + orient * (gamma1 - gamma2)
+    alpha_norm_0_pi = normalize_angle_0_pi(alpha)
+    alpha_norm_0_2pi = normalize_angle_0_2pi(alpha)
+    if alpha_norm_0_2pi >= np.pi:
         return None
     
-    if bend['orientation'] > 0:
-        corridor_with_bend = np.hstack([bend['p1_lower_right'], bend['outter_arc'], bend['p2_upper_right'], bend['p2_upper_left'], bend['inner_arc'], bend['p1_lower_left'], bend['p1_lower_right']])
-    else:
-        corridor_with_bend = np.hstack([bend['p1_lower_right'], bend['inner_arc'], bend['p2_upper_right'], bend['p2_upper_left'], bend['outter_arc'], bend['p1_lower_left'], bend['p1_lower_right']])
+    # compute inner / outer radius approximation
+    stop_inner_radius = (start_inner_radius-center) @ rotation_matrix(orient * alpha_norm_0_pi).T + center
+    stop_outer_radius = (start_outer_radius-center) @ rotation_matrix(orient * alpha_norm_0_pi).T + center
 
-    return Obstacle(zip(*corridor_with_bend.tolist()))
+    alphas = np.linspace(0, alpha_norm_0_pi, n_radius_approx) 
+    inner_radius = (start_inner_radius-center) @ rotation_matrix(orient * alphas).T + center  
+    outer_radius = (start_outer_radius-center) @ rotation_matrix(orient * alphas).T + center  
 
-def merge_list_of_corridors_with_bend(edges:List[LineString], prev_edges:List[LineString], progs:List[float], widths:List[float], margin:float=0.3, list_of_radius:List[float] | None = None) -> Obstacle:
-    """
-    It is a bit stupid: 
-    edges are the complete edge from anchor to end point
-    prev_edges are just the edge covered by each corridor.
-    """
-    if len(edges) < 1:
-        return None
-    elif len(edges) == 1:
-        return get_rectangle_from_progression_and_width(edges[0], progs[0], widths[0], margin=margin)
+    # Compute rectangle boundaries
+    center_of_rotation = 0.5 * (stop_inner_radius + stop_outer_radius)
+    rect_dir_vec = end_point - center_of_rotation
+    rect_dir_norm = np.linalg.norm(rect_dir_vec)
+    rect_angle = np.atan2(-rect_dir_vec[0], rect_dir_vec[1])
+    rect_dir_with_margin = rect_dir_vec * ( 1 + 1*length_margin / rect_dir_norm)
+    rect_height = np.linalg.norm(rect_dir_with_margin)
 
-    # First corridor
-    edge, prog, width = edges[0], progs[0], widths[0]
-    r0 = get_rectangle_from_progression_and_width(edge, prog, width, margin=margin)
-    merged_corridors_left = [
-        r0.lower_left_corner[:, None]
-    ]
-    merged_corridors_right = [
-        r0.lower_right_corner[:, None]
-    ]
+    top_right = stop_inner_radius + rect_dir_vec * ( 1 + length_margin / rect_dir_norm)
+    top_left = stop_outer_radius + rect_dir_vec * ( 1 + length_margin / rect_dir_norm)
+    
+    corridor_coords = np.hstack([inner_radius.T, top_right[:, None], top_left[:, None], np.fliplr(outer_radius.T), inner_radius.T[:, 0, None]])
+    corridor = Obstacle(corridor_coords.T.tolist(), geometry_type=Polygon)
+    rect = Rectangle(*(center_of_rotation + np.array([0, rect_height/2])), rect_height, width-width_margin).rotate(rect_angle, center_of_rotation, use_radians=True)
 
-    for i in range(1, len(edges)):
-        # Retrieve actual and previous bend data
-        edge, prog, width = edges[i], progs[i], widths[i]
-        edge_prev, width_prev = prev_edges[i-1], widths[i-1]
+    return rect, corridor
 
-        if list_of_radius is not None:
-            bend = get_bend(edge, prog, width, edge_prev, width_prev, margin=margin, radius=list_of_radius[i])
-        else:
-            bend = get_bend(edge, prog, width, edge_prev, width_prev, margin=margin)
 
-        if bend is None:
-            raise TypeError(f"bend is invalid: idx {i} with width={width}, margin={margin}, radius={list_of_radius[i]}")
 
-        # Stitch shapes
-        if bend['orientation'] > 0: # bend to the left
-            merged_corridors_left.insert(0, bend['inner_arc'])
-            merged_corridors_right.append(bend['outter_arc'])
-        else:
-            merged_corridors_left.insert(0, bend['outter_arc'])
-            merged_corridors_right.append(bend['inner_arc'])
-
-    rf = get_rectangle_from_progression_and_width(edge, prog, width, margin=margin)
-    merged_corridors_left.insert(0, rf.upper_left_corner[:, None])
-    merged_corridors_right.append(rf.upper_right_corner[:, None])
-    corridors_with_bend = np.hstack(merged_corridors_right+merged_corridors_left)
-    return Obstacle(zip(*corridors_with_bend.tolist()))
 
