@@ -78,8 +78,11 @@ class WaveForceEstimator:
         Returns (F_wx, F_wy): First order wave load computed with Froude-Krylof force approximation. [N]
         '''
         if T_p is None:
-            idx = sum([i if H_s in h_range else 0 for i, h_range in enumerate(SIGNIFICANT_WAVE_HEIGHT_TABLE)])
+            idx = sum([i if h_range[0] <= H_s <= h_range[1] else 0 for i, h_range in enumerate(SIGNIFICANT_WAVE_HEIGHT_TABLE)])
             T_p = PEAK_PERIOD_TABLE[idx]
+
+        if H_s == 0 or T_p == 0:
+            return np.array([0, 0, 0])
 
         psi = np.deg2rad(psi) if degrees else psi
         wave_dir = np.deg2rad(psi) if degrees else wave_dir

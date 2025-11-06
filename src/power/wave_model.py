@@ -232,25 +232,3 @@ class JONSWAPWaveModel:
         Fy_t = np.sum(Fy_ij, axis=(0, 1))
 
         return np.array([Fx_t, Fy_t, Mz_t])
-    
-    def get_wave_force_params(self, Hs, Tp, psi_0,
-                              omega_vec=None, psi_vec=None, s=None):
-        if omega_vec is None: omega_vec = self.omega_vec      # (Nw,)
-        if psi_vec is None: psi_vec = self.psi_vec          # (Nd,)
-        if s is None: s = self.s
-        
-        # Compute wave spectrum and the spreading function
-        S_w = self.jonswap_spectrum(Hs, Tp, omega_vec)      # (Nw,)
-        D_psi = self.spreading_function(psi_0, s, psi_vec)  # (Nd,)
-        
-        # Check if spectrum is consistent with Hs
-        target_m0 = Hs**2 / 16.0
-        m0_num = np.sum(S_w) * self.domega
-        if m0_num > 0:
-            S_w *= (target_m0 / m0_num)  # scale to match Hs
-        
-        # Normalize the D to integrate to 1 over psi
-        # So that the sum over D(psi) dpsi = 1
-        D_psi = D_psi / (D_psi.sum() * self.dpsi)           # (Nd,)
-        
-        return S_w, D_psi, psi_0
