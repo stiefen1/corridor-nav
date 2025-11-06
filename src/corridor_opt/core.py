@@ -10,7 +10,7 @@ from colorama import Fore
 def build_corridors_graph(
         edges_as_linestring: List [LineString],
         obstacles: List [Obstacle],
-        n_particles: int = 50, max_iter: float = 100, inertia: float = 0.5, c_cognitive: float = 0.2, c_social: float = 0.5,
+        n_particles: int = 50, max_iter: float = 100, inertia: float = 0.5, c_cognitive: float = 0.2, c_social: float = 0.5, stop_at_variance: float = 1e-4,
         distance_margin: float = 15, # Minimum sideway distance from a corridor to the shore -> must be equal to the safety radius of own vessel
         min_corridor_width: float = 10, # Minimal width that we expect a ship to be able to track
         max_corridor_width: float = 100,
@@ -53,7 +53,7 @@ def build_corridors_graph(
                 inertia=inertia,
                 c_cognitive=c_cognitive,
                 c_social=c_social,
-                stop_at_variance=1e-4,
+                stop_at_variance=stop_at_variance,
                 lbx = (0.01, (min_corridor_width + 2 * distance_margin) / (max_corridor_width + 2 * distance_margin) - 1)
             )
 
@@ -64,7 +64,7 @@ def build_corridors_graph(
             width_opt_with_margin = width_opt - 2 * distance_margin
             
             if pso.get_optimal_cost() > 1e3 or width_opt_with_margin <= 0:
-                print(Fore.MAGENTA + f"invalid corridor, skipping...")
+                print(Fore.MAGENTA + f"invalid corridor ({pso.swarm.n_iter}/{max_iter} iterations), skipping...")
                 valid = False
                 break
 

@@ -17,7 +17,8 @@ pso_params = {
     'max_iter': 100,
     'inertia': 0.5,
     'c_cognitive': 0.2,
-    'c_social': 0.5
+    'c_social': 0.5,
+    'stop_at_variance': 1e-4
     }
 corridor_params = {
     'distance_margin': 10,
