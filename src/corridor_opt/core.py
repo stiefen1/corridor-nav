@@ -73,7 +73,12 @@ def build_corridors_graph(
                 _, bend = out
                 print(Fore.GREEN + "".join(subsegment_index*["\t"]) + f"({i+1}.{subsegment_index}/{len(edges_as_linestring)}) width: {min_corridor_width:.1f} <= {width_opt_with_margin:.1f} <= {max_corridor_width:.1f}")
                 temp_corridors.append(bend)
-                progression += prog_opt * (1-progression)
+
+                delta_prog = prog_opt * (1-progression)
+                if progression + delta_prog < 1:
+                    delta_prog *= 0.97 # Ensure overlap if prog_opt does not lead to final main node
+
+                progression += delta_prog
                 if progression < 1:
                     edge_prev = LineString(edge.interpolate(np.linspace((progression-prog_opt)/(1-prog_opt), progression, 30), normalized=True))
             else:
