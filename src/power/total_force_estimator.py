@@ -5,8 +5,10 @@ using the ship's dynamics.
 """
 
 from power import WaveForceEstimator, WindForceEstimator, DefaultWaveParameters, DefaultWindParameters
+from weather.weather_helpers import WeatherSample
+from traffic.ships import OwnShip
 from dataclasses import dataclass, asdict
-from typing import Dict
+from typing import Dict, Any
 import numpy as np
 
 @dataclass
@@ -109,34 +111,41 @@ class ForceEstimator:
             self,
             u: float,
             psi: float,
-            wind_speed: float,
-            wind_dir: float,
-            current_speed: float,
-            current_dir: float,
-            significant_wave_height: float,
-            wave_dir: float,
+            weather: WeatherSample,
             v: float = 0,
             r: float = 0,
-            degrees=False
+            degrees: bool = True # Specify whether psi and r are in degrees or not
         ) -> np.ndarray:
         """
         Returns the generalized force that must be produced by actuators to maintain actual speed. 
         """
-        current_dir = np.deg2rad(current_dir) if degrees else current_dir
-        wind_dir = np.deg2rad(wind_dir) if degrees else wind_dir
-        wave_dir = np.deg2rad(wave_dir) if degrees else wave_dir
+        # If any component of weather is none, set it to zero to disable it
+        if weather.current_dir_to is None or weather.current_speed is None:
+            weather.current_dir_to = 0.0
+            weather.current_speed = 0.0
+        if weather.wind_dir_to is None or weather.wind_speed is None:
+            weather.wind_dir_to = 0.0
+            weather.wind_speed = 0.0
+        if weather.wave_dir_to is None or weather.Hs is None:
+            weather.wave_dir_to = 0.0
+            weather.Hs = 0.0
+
+        current_dir = np.deg2rad(weather.current_dir_to) 
+        wind_dir = np.deg2rad(weather.wind_dir_to)
+        wave_dir = np.deg2rad(weather.wave_dir_to)
         psi = np.deg2rad(psi) if degrees else psi
+        r = np.deg2rad(r) if degrees else r
 
         # Environmental loads
-        tau_wave = self.wave_force_estimator.get(u, psi, significant_wave_height, wave_dir)
-        tau_wind = self.wind_force_estimator.get(u, psi, wind_speed, wind_dir, v=v)
+        tau_wave = self.wave_force_estimator.get(u, psi, weather.Hs, wave_dir)
+        tau_wind = self.wind_force_estimator.get(u, psi, weather.wind_speed, wind_dir, v=v)
         tau_ext = tau_wave + tau_wind
 
         # Ship velocity
         vel = np.array([u, v, r])
 
         # Current velocity
-        current_vel = current_speed * np.array([
+        current_vel = weather.current_speed * np.array([
             np.cos(current_dir), # North
             np.sin(current_dir), # East
             0
@@ -144,7 +153,7 @@ class ForceEstimator:
         current_vel_in_ship_frame = self.rotation(psi).T @ current_vel
         vel_rel = vel - current_vel_in_ship_frame
 
-        nu_dot_des = np.array([0, 0, 0])
+        nu_dot_des = np.array([0, 0, 0]) # Steady-state
 
         # Dynamics: M @ nu_dot + C(nu) @ nu + D(nu) = tau_ext + tau_actuators
         tau_actuators = self.mass_matrix() @ nu_dot_des \
@@ -158,5 +167,6 @@ class ForceEstimator:
 
 if __name__ == "__main__":
     f_est = ForceEstimator()
-    print(f_est.get(2, 30, 2, 120, 1, 0, 0, 0, degrees=True))
+    w = WeatherSample(0, 0, 0, 0, 1, 40, 20)
+    print(f_est.get(2, 30, w, degrees=True))
 
