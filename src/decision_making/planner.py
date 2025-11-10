@@ -29,7 +29,7 @@ class Planner:
         self.energy_estimator = energy_estimator or EnergyEstimator()
         self.force_estimator = force_estimator or ForceEstimator()
         self.weather_client = weather_client or WeatherClient(user_agent="ecdisAPP/1.0 ecdis@example.com", mode="met")
-        self.ais_client = ais_client or ...
+        self.ais_client = ais_client or ... # TODO: Create AIS object to query data from
         self.risk_model = risk_model or RiskModel()
         self.mu = mu
 
