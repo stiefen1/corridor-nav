@@ -1,14 +1,17 @@
 from corridor_opt.corridor import Corridor
-from weather.weather_helpers import WeatherSample
 from power.total_force_estimator import ForceEstimator
-from typing import Optional
+from typing import Dict, Optional
+import numpy as np
 
 class EnergyEstimator:
+    """
+    Convert a generalized force to be applied on the own ship into an energy consumption estimation
+    """
     def __init__(
             self,
-            force_estimator: Optional[ForceEstimator] = None
+            params: Optional[Dict] = None
     ):
-        self.force_estimator = force_estimator or ForceEstimator()
+        self.params = params
 
-    def get(self, corridor: Corridor, weather: WeatherSample) -> float:
+    def get(self, corridor: Corridor, force: np.ndarray, travel_time: float) -> float:
         return 0
