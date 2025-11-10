@@ -30,17 +30,32 @@ class WeatherSample:
     # Atmosphere (locationforecast)
     wind_speed: Optional[float] = None          # m/s
     wind_dir_from: Optional[float] = None       # deg (meteorological FROM)
+    wind_dir_to: Optional[float] = None         # deg (meteorological TO)
     air_temp: Optional[float] = None            # °C
     pressure: Optional[float] = None            # hPa
 
     # Ocean (oceanforecast)
     Hs: Optional[float] = None                  # m (significant wave height)
     wave_dir_from: Optional[float] = None       # deg FROM
+    wave_dir_to: Optional[float] = None         # deg TO
     sea_temp: Optional[float] = None            # °C
 
     current_speed: Optional[float] = None       # m/s
     current_dir_to: Optional[float] = None      # deg TO
     current_dir_from: Optional[float] = None    # deg FROM
+
+    def __post_init__(self):
+        """
+        Convert directions FROM --> TO
+        """
+        if self.wind_dir_from is not None:
+            self.wind_dir_to = (self.wind_dir_from + 180) % 360
+
+        if self.wave_dir_from is not None:
+            self.wave_dir_to = (self.wave_dir_from + 180) % 360
+
+        if self.current_dir_from is not None and self.current_dir_to is None:
+            self.current_dir_to = (self.current_dir_from + 180) % 360
 
     def as_dict(self) -> dict:
         return self.__dict__.copy()
@@ -242,8 +257,8 @@ class WeatherClient:
 
         return out
 
-
-wc = WeatherClient(user_agent="ecdisAPP/1.0 ecdis@example.com", mode="met")
-print(wc.get(60.10, 5.00, dt.datetime.now(dt.UTC)))
-# print(wc.get(60.10, 5.00, dt.datetime.utcnow()))
+if __name__ == "__main__":
+    wc = WeatherClient(user_agent="ecdisAPP/1.0 ecdis@example.com", mode="met")
+    print(wc.get(60.10, 5.00, dt.datetime.now(dt.UTC)))
+    # print(wc.get(60.10, 5.00, dt.datetime.utcnow()))
 
