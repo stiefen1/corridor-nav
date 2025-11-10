@@ -40,6 +40,7 @@ class Planner:
             psi: float, # Heading
             when_utc: dt.datetime, # current time
             ship_nominal_maneuverability: float, # Maneuverability without any external forces
+            ship_nominal_tracking_accuracy: float, # Tracking accuracy without any external forces
             degrees: bool = True # Whether heading is provided in degrees or radians
         ) -> List[Corridor]:
         """
@@ -64,7 +65,7 @@ class Planner:
             energy_cons = self.energy_estimator.get(corridor, forces, travel_time)
 
             # Traffic
-            traffic_density = ...
+            traffic_density = ... # TODO: Evaluate traffic density
 
             # Risk = Expected travel time
             expected_travel_time = self.risk_model.get(
@@ -72,11 +73,11 @@ class Planner:
                 traffic_density,
                 forces,
                 corridor.width,
-                ship_nominal_maneuverability
+                ship_nominal_maneuverability,
+                ship_nominal_tracking_accuracy
             )
 
             cost = expected_travel_time + self.mu * energy_cons
-
 
         return self.corridors
     
