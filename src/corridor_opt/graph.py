@@ -48,7 +48,6 @@ def get_edges_as_linestring(graph:nx.Graph, verbose=False) -> Tuple[ List[LineSt
                     combinations.append((neighbor, main_node))
                 continue
 
-
             out = next_node(graph, neighbor, main_node, main_nodes, prev_nodes=[neighbor])
             prev_nodes, main_node_final, _ = out
 

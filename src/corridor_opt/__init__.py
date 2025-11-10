@@ -7,3 +7,4 @@ from .geometry import *
 from .voronoi import *
 from .graph import *
 from .core import *
+from .corridor import *

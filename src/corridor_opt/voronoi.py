@@ -7,7 +7,7 @@ from tqdm import tqdm
 from pathlib import Path
 import pickle
 
-def sample_points_from_obstacles(obstacles:list[Obstacle], meters_between_points=50, verbose:bool=False):
+def sample_points_from_obstacles(obstacles:list[Obstacle], meters_between_points: float = 50, verbose:bool=False):
     """
     Sample multiple points from each obstacle's boundary.
     """
@@ -27,7 +27,7 @@ def sample_points_from_obstacles(obstacles:list[Obstacle], meters_between_points
     
     return np.array(all_points)
 
-def sample_points_from_lim(xlim, ylim, meters_between_points=50, verbose:bool=False):
+def sample_points_from_lim(xlim, ylim, meters_between_points: float = 50, verbose:bool=False):
     """
     Generate boundary points around the perimeter.
     

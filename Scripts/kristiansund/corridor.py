@@ -5,6 +5,7 @@ from corridor_opt.voronoi import load_graph
 from corridor_opt.graph import get_edges_as_linestring, find_high_degree_nodes
 from corridor_opt.core import build_corridors_graph
 from corridor_opt.extract_shoreline import get_obstacles_in_window
+from corridor_opt.corridor import Corridor
 from seacharts.enc import ENC
 import sys, os, pathlib, networkx as nx, matplotlib.pyplot as plt
 
@@ -18,7 +19,7 @@ pso_params = {
     'inertia': 0.5,
     'c_cognitive': 0.2,
     'c_social': 0.5,
-    'stop_at_variance': 1e-4
+    'stop_at_variance': 1e-5
     }
 corridor_params = {
     'distance_margin': 10,
@@ -42,7 +43,10 @@ assert graph is not None, f"Failed to load graph using path {path_to_graph}."
 edges_as_linestring, ids = get_edges_as_linestring(graph)
 
 # Build corridors
-corridors = build_corridors_graph(edges_as_linestring, obstacles, **pso_params, **corridor_params)
+save_folder = os.path.join(pathlib.Path(__file__).parent, 'output')
+build_corridors_graph(edges_as_linestring, ids, obstacles, **pso_params, **corridor_params, save_folder=save_folder)
+corridors = Corridor.load_all_corridors_in_folder(save_folder)
+
 
 # Retrieve main nodes to plot
 main_nodes = find_high_degree_nodes(graph)

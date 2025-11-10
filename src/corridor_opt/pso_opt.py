@@ -52,7 +52,7 @@ class CorridorCostProgAndLimitedWidth(CostBase):
         if out is None: # Invalid geometry
             return 10000
         else:
-            _, bend = out
+            _, bend, info = out
         
         # Penalty for intersection with obstacles
         for obs in self.obstacles:
@@ -61,7 +61,7 @@ class CorridorCostProgAndLimitedWidth(CostBase):
                 return cost
 
         # Reward for path progression and width
-        cost = 10*np.exp(-(normalized_progression**2 + 2 * normalized_width_change)) 
+        cost = 10*np.exp(-(4*normalized_progression + 7*normalized_width_change)) 
         
         return cost 
 

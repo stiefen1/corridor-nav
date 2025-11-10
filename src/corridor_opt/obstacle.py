@@ -1,6 +1,6 @@
 from shapely import Polygon, Point
 from corridor_opt.geometry import GeometryWrapper
-from typing import Tuple
+from typing import Tuple, List
 from shapely import affinity
 import numpy as np
 
@@ -141,3 +141,4 @@ class Rectangle(Obstacle):
     @property
     def width(self) -> float:
         return self._dim[0]
+
