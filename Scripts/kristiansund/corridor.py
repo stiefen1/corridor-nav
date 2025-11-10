@@ -12,7 +12,7 @@ import sys, os, pathlib, networkx as nx, matplotlib.pyplot as plt
 sys.setrecursionlimit(2000) # Required to explore nodes of the graph
 
 enc_config = os.path.join('config', 'kristiansund.yaml')
-path_to_graph = os.path.join(pathlib.Path(__file__).parent, 'output', 'graph.pkl')
+path_to_graph = os.path.join(pathlib.Path(__file__).parent, 'output', 'graph_with_boundary.pkl')
 pso_params = {
     'n_particles': 50,
     'max_iter': 100,
@@ -43,7 +43,7 @@ assert graph is not None, f"Failed to load graph using path {path_to_graph}."
 edges_as_linestring, ids = get_edges_as_linestring(graph)
 
 # Build corridors
-save_folder = os.path.join(pathlib.Path(__file__).parent, 'output')
+save_folder = os.path.join(pathlib.Path(__file__).parent, 'output', 'corridors')
 build_corridors_graph(edges_as_linestring, ids, obstacles, **pso_params, **corridor_params, save_folder=save_folder)
 corridors = Corridor.load_all_corridors_in_folder(save_folder)
 

@@ -7,7 +7,7 @@ from corridor_opt.extract_shoreline import get_obstacles_in_window
 from seacharts.enc import ENC
 import os, pathlib, matplotlib.pyplot as plt, networkx as nx
 
-graph_filename = 'graph.pkl'
+graph_filename = 'graph_with_boundary.pkl'
 path_to_graph = os.path.join(pathlib.Path(__file__).parent, 'output', graph_filename)
 
 config = os.path.join('config', 'kristiansund.yaml')
@@ -15,11 +15,12 @@ enc = ENC(config)
 xlim = enc.bbox[0], enc.bbox[2]
 ylim = enc.bbox[1], enc.bbox[3]
 
-obstacles = get_obstacles_in_window(enc, depth=5)
+obstacles = get_obstacles_in_window(enc, depth=10)
 
 graph = get_safe_voronoi_graph(obstacles, xlim, ylim, 
                                 distance_between_generator_points=10, 
-                                min_clearance=200, verbose=True)
+                                min_clearance=200, verbose=True, sample_boundary=True,
+                                distance_between_generator_points_boundary=1000)
 
 save_graph(graph, path_to_graph)
 

@@ -33,8 +33,10 @@ def get_rectangle_and_bend_from_progression_and_width(edge: LineString, progress
 
     # radius & width
     # radius = np.linalg.norm(end_point - joint_point) / 4 + width
-    radius = np.linalg.norm(end_point - joint_point) / 4 + 2 * width # width
-    
+    # radius = np.max([np.linalg.norm(end_point - joint_point) * (4 / 16), 2*width]) # + width # width # Originally: 4/16 = 1/4 # --> BEFORE IT WAS NP.MAX
+    distance = LineString(edge.interpolate(np.linspace(0, progression, 30), normalized=True)).length
+    radius = np.max([distance / 4, width])
+
     # Normalize angle difference and determine orientation
     delta_normalized = normalize_angle_0_2pi(theta2-theta1)
     orient = -1 if 0 <= delta_normalized <= np.pi else 1

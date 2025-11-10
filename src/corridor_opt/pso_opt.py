@@ -61,7 +61,7 @@ class CorridorCostProgAndLimitedWidth(CostBase):
                 return cost
 
         # Reward for path progression and width
-        cost = 10*np.exp(-(4*normalized_progression + 7*normalized_width_change)) 
+        cost = 10*np.exp(-(4*normalized_progression + 6*normalized_width_change)) # prev: (4, 7)
         
         return cost 
 

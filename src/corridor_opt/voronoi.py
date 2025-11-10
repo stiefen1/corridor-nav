@@ -173,7 +173,8 @@ def get_safe_voronoi_graph(
         distance_between_generator_points:float,
         min_clearance:float,
         verbose:bool=False,
-        sample_boundary:bool=False
+        sample_boundary:bool=False,
+        distance_between_generator_points_boundary:float | None = None
     ) -> nx.Graph:
 
     """
@@ -183,7 +184,7 @@ def get_safe_voronoi_graph(
     
     if sample_boundary:
         # Add boundary points
-        boundary_points = sample_points_from_lim(xlim, ylim, meters_between_points=distance_between_generator_points, verbose=verbose)
+        boundary_points = sample_points_from_lim(xlim, ylim, meters_between_points=distance_between_generator_points_boundary or distance_between_generator_points, verbose=verbose)
         all_points = np.vstack([seed_points, boundary_points])
     else:
         all_points = seed_points
