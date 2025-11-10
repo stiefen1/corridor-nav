@@ -17,6 +17,7 @@ from typing import Dict, List, Tuple, Optional
 import numpy as np
 import requests
 from matplotlib.quiver import Quiver
+from pyproj import Transformer
 
 
 @dataclass
@@ -105,11 +106,20 @@ class WeatherClient:
         self._cache[key] = out
         return out
     
-    def get(self, lat: float, lon: float, when_utc: dt.datetime) -> WeatherSample:
+    def get(self, when_utc: dt.datetime, north: Optional[float] = None, east: Optional[float] = None, lat: Optional[float] = None, lon: Optional[float] = None) -> WeatherSample:
         """
-        Return a WeatherSample with merged MET (and ocean) data for (lat, lon, time).
+        Return a WeatherSample with merged MET (and ocean) data for time and (lat, lon) or (north, east).
         Uses small spatial/temporal bucketing to cache results.
         """
+        if lat is not None and lon is not None:
+            pass
+        elif north is not None and east is not None:
+            transformer_to_wgs = Transformer.from_crs(32633, 4326, always_xy=True)
+            lon, lat = transformer_to_wgs.transform(east, north)
+        else:
+            raise ValueError(f"either north, east or lat, lon must be specified.")
+
+
         if self.mode == "none":
             return WeatherSample(lat=lat, lon=lon, requested_time_utc=when_utc)
 
@@ -259,6 +269,6 @@ class WeatherClient:
 
 if __name__ == "__main__":
     wc = WeatherClient(user_agent="ecdisAPP/1.0 ecdis@example.com", mode="met")
-    print(wc.get(60.10, 5.00, dt.datetime.now(dt.UTC)))
+    print(wc.get(dt.datetime.now(dt.UTC), lat=60.10, lon=5.00))
     # print(wc.get(60.10, 5.00, dt.datetime.utcnow()))
 

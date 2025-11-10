@@ -27,5 +27,5 @@ wc = WeatherClient(user_agent="ecdisAPP/1.0 ecdis@example.com", mode="met")
 lat, lon = 60.10, 5.00  # Trondheim
 when = dt.datetime.now(dt.UTC)
 
-sample = wc.get(lat, lon, when)
+sample = wc.get(when, lat=lat, lon=lon)
 print(sample)
