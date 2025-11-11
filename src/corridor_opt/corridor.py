@@ -12,6 +12,7 @@ import numpy as np
 from shapely import LineString
 from corridor_opt.corridor_utils import get_rectangle_and_bend_from_wpts
 from colorama import Fore, Style, init
+from copy import deepcopy
 
 
 
@@ -48,10 +49,27 @@ class Corridor(Obstacle):
         self.length_margin = length_margin
         self.n_radius_approx = n_radius_approx
         self.edge_id = edge_id
-        
+        self.flipped: bool = False
+
 
         xy = self.init_corridor()
         super().__init__(xy=xy)
+
+    def get_flipped(self) -> "Corridor":
+        """
+        Flip blackbone, meaning orientation will be flipped as well
+        """
+        new_corridor = deepcopy(self)
+        x, y = self.backbone.xy
+        new_corridor.backbone = LineString(
+            np.concatenate([
+                np.fliplr([x]),
+                np.fliplr([y])
+            ]).T
+        )
+        new_corridor.flipped = not(self.flipped)
+        return new_corridor
+
 
     def init_corridor(self) -> List[Tuple[float, float]]:
         """
@@ -82,10 +100,11 @@ class Corridor(Obstacle):
         """
         Returns the average orientation of the backbone using n_samples evenly spaced.
         """
-        psi = 0
-        for p in np.linspace(0, 1, n_samples):
-            psi += self.orientation(p, normalized=True) / n_samples
-        return psi
+        p1 = self.backbone_coord(0, normalized=True)
+        p2 = self.backbone_coord(1, normalized=True)
+
+        return np.atan2(p2[0]-p1[0], p2[1]-p1[1])
+
 
     def orientation(self, progression: float, normalized: bool = False) -> float:
         """
@@ -322,4 +341,21 @@ class Corridor(Obstacle):
             return False
         
         return False
+    
+
+if __name__ == "__main__":
+    import os, numpy as np, matplotlib.pyplot as plt
+    path_to_corridors = os.path.join('Scripts', 'kristiansund', 'output', 'corridors_best')
+    corridors = Corridor.load_all_corridors_in_folder(path_to_corridors)
+    for corridor in corridors:
+        a, aflip = np.rad2deg(corridor.average_orientation(n_samples=10)), np.rad2deg(corridor.flip().average_orientation(n_samples=10))
+        error = np.abs(a - aflip)
+        print(f"{a} - {aflip} = {error}")
+        _, ax = plt.subplots()
+        corridor.plot(ax=ax)
+        ax.plot(*corridor.backbone.xy, '--', c='black')
+        
+        ax.set_aspect('equal')
+        plt.show()
+        plt.close()
 

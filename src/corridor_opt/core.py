@@ -86,7 +86,7 @@ def build_corridors_graph(
                 _, bend, info = out
                 print(Fore.GREEN + "".join(subsegment_index*["\t"]) + f"({i+1}.{subsegment_index}/{len(edges_as_linestring)}) width: {min_corridor_width:.1f} <= {width_opt_with_margin:.1f} <= {max_corridor_width_retry:.1f}")
                 
-                new_corridor = Corridor(**info, prev_main_node=main_node_id[1], next_main_node=main_node_id[0], idx=subsegment_index)
+                new_corridor = Corridor(**info, prev_main_node=main_node_id[1], next_main_node=main_node_id[0], idx=subsegment_index, edge_id=i)
                 
                 temp_corridors.append(new_corridor)
                 # temp_corridors.append(bend)

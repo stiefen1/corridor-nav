@@ -36,7 +36,7 @@ graph = load_graph(path_to_graph)
 enc = ENC(enc_config)
 xlim = enc.bbox[0], enc.bbox[2]
 ylim = enc.bbox[1], enc.bbox[3]
-obstacles = get_obstacles_in_window(enc, depth=5)
+obstacles = get_obstacles_in_window(enc, depth=10)
 
 # Convert graph edges into linestring object
 assert graph is not None, f"Failed to load graph using path {path_to_graph}."

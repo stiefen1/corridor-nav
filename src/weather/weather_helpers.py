@@ -17,6 +17,8 @@ from typing import Dict, List, Tuple, Optional
 import numpy as np
 import requests
 from matplotlib.quiver import Quiver
+from matplotlib.axes import Axes
+import matplotlib.pyplot as plt
 from pyproj import Transformer
 
 
@@ -58,9 +60,49 @@ class WeatherSample:
         if self.current_dir_from is not None and self.current_dir_to is None:
             self.current_dir_to = (self.current_dir_from + 180) % 360
 
+        if self.lat is not None and self.lon is not None:
+            transformer_to_utm = Transformer.from_crs(4326, 32633, always_xy=True)
+            self.east, self.north =  transformer_to_utm.transform(self.lon, self.lat)
+            
+
     def as_dict(self) -> dict:
         return self.__dict__.copy()
+    
+    def quiver_wind(self, *args, ax: Optional[Axes] = None, **kwargs) -> Axes:
+        if ax is None:
+            _, ax = plt.subplots()
 
+        if self.wind_dir_to is not None and self.wind_speed is not None:
+            wind_vector = self.wind_speed * np.array([
+                np.sin(np.deg2rad(self.wind_dir_to)),
+                np.cos(np.deg2rad(self.wind_dir_to))
+            ])
+            ax.quiver(self.east, self.north, wind_vector[0], wind_vector[1], *args, **kwargs)
+        return ax
+    
+    def quiver_current(self, *args, ax: Optional[Axes] = None, **kwargs) -> Axes:
+        if ax is None:
+            _, ax = plt.subplots()
+
+        if self.current_dir_to is not None and self.current_speed is not None:
+            current_vector = self.wind_speed * np.array([
+                np.sin(np.deg2rad(self.current_dir_to)),
+                np.cos(np.deg2rad(self.current_dir_to))
+            ])
+            ax.quiver(self.east, self.north, current_vector[0], current_vector[1], *args, **kwargs)
+        return ax
+    
+    def quiver_wave(self, *args, ax: Optional[Axes] = None, **kwargs) -> Axes:
+        if ax is None:
+            _, ax = plt.subplots()
+
+        if self.wave_dir_to is not None and self.Hs is not None:
+            wave_vector = self.Hs * np.array([
+                np.sin(np.deg2rad(self.wave_dir_to)),
+                np.cos(np.deg2rad(self.wave_dir_to))
+            ])
+            ax.quiver(self.east, self.north, wave_vector[0], wave_vector[1], *args, **kwargs)
+        return ax
 
 
 # ------------------------------ WeatherClient --------------------------------
@@ -165,7 +207,7 @@ class WeatherClient:
 
         # Store a lightweight dict in cache; typed wrapper is built on return
         self._cache[key] = out
-
+        
         sample = WeatherSample(
             lat=lat_r, lon=lon_r,
             requested_time_utc=when_utc,

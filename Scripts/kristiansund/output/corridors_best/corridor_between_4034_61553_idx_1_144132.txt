@@ -1,0 +1,15 @@
+# Corridor parameters for get_rectangle_and_bend_from_wpts
+# Format: parameter_name=value
+
+[wp1] 132239.95888522774,7018303.622622528
+[wp2] 131744.57900685584,7016659.280201857
+[dir1] 1.7975565635133535,-0.9832259258255363
+[radius] 535.3958265031207
+[angle] 1.7336212375800288
+[width] 515.3958265031207
+[length_margin] 100
+[n_radius_approx] 10
+[prev_main_node] 4034
+[next_main_node] 61553
+[idx] 1
+[edge_id] 11
