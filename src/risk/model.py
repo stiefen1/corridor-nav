@@ -26,27 +26,28 @@ class RiskModel:
             ship_nominal_tracking_accuracy: float # +- meters
         ) -> float:
 
-        # Ship maneuverability
-        ship_maneuverability = ... # TODO: Evaluate ship maneuverability -> f(ship_nominal_maneuverability, forces[2])
+        # Ship maneuverability <= nominal maneuverability
+        ship_maneuverability = -np.abs(forces[2]) / 1e2 + ship_nominal_maneuverability # TODO: Evaluate ship maneuverability -> f(ship_nominal_maneuverability, forces[2])
 
-        # Ship tracking accuracy
-        ship_tracking_accuracy = ... # TODO: Evaluate tracking accuracy -> f(ship_nominal_tracking_accuracy, forces[1])
+        # Ship tracking accuracy <= nominal tracking accuracy
+        ship_tracking_accuracy = np.abs(forces[1]) / 1e4 + ship_nominal_tracking_accuracy # TODO: Evaluate tracking accuracy -> f(ship_nominal_tracking_accuracy, forces[1])
+
+        # print(f"tracking accuracy: {ship_tracking_accuracy} | ship maneuverability: {ship_maneuverability} | forces[2]: {forces[2]}")
 
         # Actual width
-        actual_width = max([width - 2 * ship_nominal_tracking_accuracy, 0])
+        actual_width = np.clip(width - 2 * ship_tracking_accuracy, 0, np.inf)
 
         # Probability of collision (power + drifting)
-        prob_powered_collision = ... # TODO: Evaluate probability of powered collision -> f(ship_maneuverability, traffic_density, width) -> we do not use actual width because in COLAV mode we're not doing path tracking (usually)
+        prob_powered_collision = np.exp(-ship_maneuverability / traffic_density / 1e5) # TODO: Evaluate probability of powered collision -> f(ship_maneuverability, traffic_density) -> we do not use width because traffic density account for this.
         prob_drifting_collision = 0
         prob_collision = prob_powered_collision + prob_drifting_collision
 
-
         # Probability of powered exit
-        ## Because of bad tracking
-        prob_powered_exit_bad_tracking = ... # f(actual_width, travel_time) -> if tracking accuracy is +-2*sigma it means 95.5% error is <= tracking accuracy. So 4.5% of the time, we get outside of it -> maybe there is something to do here
+        ## Because of bad tracking. travel_time -> infty <-> prob -> 1. actual_width -> infty <-> prob -> 0
+        prob_powered_exit_bad_tracking = 1-np.exp(-travel_time / np.clip(actual_width, 1e-6, np.inf) / 1e4) # f(actual_width, travel_time) -> if tracking accuracy is +-2*sigma it means 95.5% error is <= tracking accuracy. So 4.5% of the time, we get outside of it -> maybe there is something to do here
 
         ## Because of COLAV
-        prob_powered_exit_colav = ... # TODO: Evaluate probability of powered exit -> f(ship_maneuverability, traffic_density, width)
+        prob_powered_exit_colav = 1-np.exp(-ship_maneuverability * width / traffic_density / 1e12) # TODO: Evaluate probability of powered exit -> f(ship_maneuverability, traffic_density, width)
 
         ## Total 
         prob_powered_exit = prob_powered_exit_bad_tracking + prob_powered_exit_colav
@@ -56,6 +57,9 @@ class RiskModel:
         prob_grounding = self.prob_grounding_given_exit * (prob_powered_exit + prob_drifting_exit)
 
         assert prob_grounding + prob_collision <= 1.0, f"Sum of probabilities must be <= 1.0. Got prob(grounding)={prob_grounding}, prob(collision)={prob_collision}"
+
+        # print(prob_grounding, prob_collision)
+        # print(prob_powered_exit_bad_tracking, prob_powered_exit_colav)
 
         # Expected travel time
         expected_travel_time = prob_collision * self.t_collision + prob_grounding * self.t_grounding + (1-prob_collision-prob_grounding) * travel_time

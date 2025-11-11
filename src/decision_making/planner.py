@@ -33,24 +33,41 @@ class Planner:
         self.risk_model = risk_model or RiskModel()
         self.mu = mu
 
-
     def get_optimal_corridor_sequence(
             self,
             u: float, # Surge speed
-            psi: float, # Heading
             when_utc: dt.datetime, # current time
             ship_nominal_maneuverability: float, # Maneuverability without any external forces
             ship_nominal_tracking_accuracy: float, # Tracking accuracy without any external forces
-            degrees: bool = True # Whether heading is provided in degrees or radians
+            disable_wave: bool = False
         ) -> List[Corridor]:
         """
         Returns the optimal sequence of corridor to reach self.goal according to a risk model that accounts for target ships, weather and own ship states.
         """
+        return []
 
+    def get_costs(
+            self,
+            u: float, # Surge speed
+            when_utc: dt.datetime, # current time
+            ship_nominal_maneuverability: float, # Maneuverability without any external forces
+            ship_nominal_tracking_accuracy: float, # Tracking accuracy without any external forces
+            disable_wave: bool = False
+        ) -> Tuple[List[float], Dict]:
+        """
+        Returns the optimal sequence of corridor to reach self.goal according to a risk model that accounts for target ships, weather and own ship states.
+        """
+
+        costs = []
+        etts = [] # expected travel times
+        ecs = [] # energy consumptions
         # Compute risk for each corridor
         for corridor in self.corridors:
             # Get corridor's coordinates
             east, north = corridor.centroid
+
+            # Get average orientation in the corridor
+            psi = corridor.average_orientation()
 
             # Travel time
             travel_time = corridor.backbone.length / u # distance / speed
@@ -59,13 +76,13 @@ class Planner:
             weather_sample = self.weather_client.get(when_utc, east=east, north=north)
 
             # Environmental forces
-            forces = self.force_estimator.get(u, psi, weather_sample, degrees=degrees)
+            forces = self.force_estimator.get(u, psi, weather_sample, degrees=False, disable_wave=disable_wave)
 
             # Energy consumption
-            energy_cons = self.energy_estimator.get(corridor, forces, travel_time)
+            energy_cons = self.energy_estimator.get(corridor, u, forces, travel_time)
 
             # Traffic
-            traffic_density = ... # TODO: Evaluate traffic density
+            traffic_density = 1e-3 # TODO: Evaluate traffic density
 
             # Risk = Expected travel time
             expected_travel_time = self.risk_model.get(
@@ -78,11 +95,16 @@ class Planner:
             )
 
             cost = expected_travel_time + self.mu * energy_cons
-
-        return self.corridors
+            costs.append(cost)
+            etts.append(expected_travel_time)
+            ecs.append(self.mu * energy_cons)
+            # print(f"Expected travel time: ", expected_travel_time, "nominal travel time: ", travel_time)
+        info = {
+            'expected_travel_time': etts,
+            'energy_consumption': ecs
+            }
+        return costs, info
     
 
 if __name__ == "__main__":
-    import datetime as dt
-    wc = WeatherClient(user_agent="ecdisAPP/1.0 ecdis@example.com", mode="met")
-    print(wc.get(dt.datetime.now(dt.UTC), lat=60.10, lon=5.00))
+    pass

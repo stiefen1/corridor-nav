@@ -13,5 +13,5 @@ class EnergyEstimator:
     ):
         self.params = params
 
-    def get(self, corridor: Corridor, force: np.ndarray, travel_time: float) -> float:
-        return 0
+    def get(self, corridor: Corridor, u: float, force: np.ndarray, travel_time: float) -> float:
+        return ( np.abs(force[0]) + np.abs(force[1]) ) * u * travel_time

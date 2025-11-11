@@ -78,6 +78,15 @@ class Corridor(Obstacle):
         """
         return self.distance_to_obstacle(x, y)
     
+    def average_orientation(self, n_samples: int = 20) -> float:
+        """
+        Returns the average orientation of the backbone using n_samples evenly spaced.
+        """
+        psi = 0
+        for p in np.linspace(0, 1, n_samples):
+            psi += self.orientation(p, normalized=True) / n_samples
+        return psi
+
     def orientation(self, progression: float, normalized: bool = False) -> float:
         """
         Returns the orientation of the backbone at a given progression value. Useful for integrating power consumption along corridor.

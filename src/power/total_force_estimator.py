@@ -106,6 +106,12 @@ class ForceEstimator:
         return np.array([[np.cos(psi), -np.sin(psi), 0],
                          [np.sin(psi), np.cos(psi), 0],
                          [0, 0, 1]])
+    
+    def find_max_turning_rate(self, u: float, psi: float, weather: WeatherSample) -> float:
+        """
+        Compute the maximal steady-state turning rate value for a given surge speed, heading and weather sample.
+        """
+        return 0
 
     def get(
             self,
@@ -114,7 +120,8 @@ class ForceEstimator:
             weather: WeatherSample,
             v: float = 0,
             r: float = 0,
-            degrees: bool = True # Specify whether psi and r are in degrees or not
+            degrees: bool = True, # Specify whether psi and r are in degrees or not
+            disable_wave: bool = False
         ) -> np.ndarray:
         """
         Returns the generalized force that must be produced by actuators to maintain actual speed. 
@@ -137,7 +144,10 @@ class ForceEstimator:
         r = np.deg2rad(r) if degrees else r
 
         # Environmental loads
-        tau_wave = self.wave_force_estimator.get(u, psi, weather.Hs, wave_dir)
+        if disable_wave:
+            tau_wave = np.array([0, 0, 0])
+        else:
+            tau_wave = self.wave_force_estimator.get(u, psi, weather.Hs, wave_dir)
         tau_wind = self.wind_force_estimator.get(u, psi, weather.wind_speed, wind_dir, v=v)
         tau_ext = tau_wave + tau_wind
 
