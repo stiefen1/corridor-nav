@@ -128,7 +128,7 @@ def main():
 
     # 3) Load all corridors
     corridors = Corridor.load_all_corridors_in_folder(CORRIDOR_DIR)
-    corridors = corridors[34:35]
+
 
     # 4) Figure & base map
     fig, ax = plt.subplots(figsize=(11, 9))
