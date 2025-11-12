@@ -83,28 +83,6 @@ class WeatherClient:
             self._cache = {}
 
     # --------------------------- Public API ----------------------------------
-
-    def getOld(self, lat: float, lon: float, when_utc: dt.datetime) -> Dict:
-        """Get weather dict at the given (lat, lon, time)."""
-        if self.mode == "none":
-            return {}
-
-        lat_r = self._round(lat, self.grid_deg)
-        lon_r = self._round(lon, self.grid_deg)
-        hour  = self._time_bucket(when_utc, self.time_bucket_min).isoformat()
-        key = (lat_r, lon_r, hour, self.mode)
-
-        if key in self._cache:
-            return self._cache[key]
-
-        out: Dict[str, Optional[float]] = {}
-        if self.mode.startswith("met"):
-            out.update(self._met_locationforecast(lat_r, lon_r, when_utc))
-        # if "ocean" in self.mode:
-            out.update(self._met_oceanforecast(lat_r, lon_r, when_utc))
-
-        self._cache[key] = out
-        return out
     
     def get(self, when_utc: dt.datetime, north: Optional[float] = None, east: Optional[float] = None, lat: Optional[float] = None, lon: Optional[float] = None) -> WeatherSample:
         """

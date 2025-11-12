@@ -37,6 +37,10 @@ class TargetShip:
     navigationalStatus: float
     mmsi: float
     msgtime: datetime
+    shipLength: float 
+    shipWidth: float
+    area_rect_m2: float
+    area_ellip_m2: float
     
 
 
@@ -52,3 +56,20 @@ class TargetShip:
     # navigationalStatus: 5
     # mmsi: 232026676
     # msgtime: '2025-11-03T22:59:11+00:00'
+
+
+    #  'courseOverGround': None, 
+    #  'latitude': 63.117825, 
+    #  'longitude': 7.73753, 
+    #  'name': 'RS SJOVEKTEREN', 
+    #  'rateOfTurn': None, 
+    #  'shipType': 51, 
+    #  'speedOverGround': 0, 
+    #  'trueHeading': None, 
+    #  'navigationalStatus': 15, 
+    #  'mmsi': 258012170, 
+    #  'msgtime': '2025-10-31T12:00:24+00:00', 
+    #  'shipLength': 8, 
+    #  'shipWidth': 2, 
+    #  'area_rect_m2': 16, 
+    #  'area_ellip_m2': 12.56},

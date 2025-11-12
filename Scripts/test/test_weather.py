@@ -20,12 +20,41 @@ Goal: return a current vector given a position in Norway.
 
 
 import datetime as dt
-from weather.weather_helpers import WeatherClient
 
-wc = WeatherClient(user_agent="ecdisAPP/1.0 ecdis@example.com", mode="met")
+from weather.weather_build_helpers import WeatherClient as wc
+
 
 lat, lon = 60.10, 5.00  # Trondheim
-when = dt.datetime.now(dt.UTC)
 
-sample = wc.get(when, lat=lat, lon=lon)
+csv_read = True
+
+
+
+if csv_read:
+    ####### To use the CSV instead #####
+    when = dt.datetime(2025, 11, 11, 23, 0, 0)  # YYYY, MM, DD, HH, MM, SS
+    wc = wc(
+        user_agent="Replay/1.0",
+        mode="none",                    # stop hitting live APIs
+        source="archive",
+        archive_csv="met_stream.csv"
+    )
+    sample = wc.get(when_utc=when, lat=lat, lon=lon)
+
+else:
+    when = dt.datetime.now(dt.UTC)
+    wc = wc(
+        user_agent="ecdisAPP/1.0 ecdis@example.com",
+        mode="met",
+        source="live",
+        archive_csv="met_stream.csv"
+        )
+    sample = wc.get(when, lat=lat, lon=lon)
+
 print(sample)
+
+
+
+
+
+

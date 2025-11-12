@@ -31,6 +31,70 @@ TOKEN_URL     = "https://id.barentswatch.no/connect/token"
 HIST_MMSI_URL   = "https://historic.ais.barentswatch.no/v1/historic/mmsiinarea"
 HIST_TRACKS_URL = "https://historic.ais.barentswatch.no/v1/historic/tracks/{mmsi}/{from_iso}/{to_iso}"
 
+# --- Getting Size of Ships from Live Data ---
+LIVE_COMBINED_URL = "https://live.ais.barentswatch.no/v1/combined?modelType=Full&modelFormat=Geojson"
+
+import json, time
+
+def fetch_sizes_for_mmsis(token: str, wanted_mmsis: set[int], max_seconds: int = 6) -> dict[int, dict]:
+    """
+    Open the live 'Full+GeoJSON' stream briefly and collect shipLength/shipWidth (and A..D) for given MMSIs.
+    Returns: {mmsi: {"shipLength": L, "shipWidth": B, "dimensionA": A, "dimensionB": Bf, "dimensionC": C, "dimensionD": D}}
+    """
+    headers = {"Authorization": f"Bearer {token}"}
+    out: dict[int, dict] = {}
+    t0 = time.time()
+    with requests.get(LIVE_COMBINED_URL, headers=headers, stream=True, timeout=30) as r:
+        r.raise_for_status()
+        for line in r.iter_lines():
+            if not line:
+                if time.time() - t0 > max_seconds or len(out) == len(wanted_mmsis):
+                    break
+                continue
+            try:
+                feat = json.loads(line.decode("utf-8"))
+                props = feat.get("properties", {})
+                mmsi = props.get("mmsi")
+                if mmsi in wanted_mmsis and mmsi not in out:
+                    out[mmsi] = {
+                        "shipLength": props.get("shipLength"),
+                        "shipWidth":  props.get("shipWidth"),
+                        "dimensionA": props.get("dimensionA"),
+                        "dimensionB": props.get("dimensionB"),
+                        "dimensionC": props.get("dimensionC"),
+                        "dimensionD": props.get("dimensionD"),
+                    }
+                    if len(out) == len(wanted_mmsis) or time.time() - t0 > max_seconds:
+                        break
+            except Exception:
+                # ignore keepalive / partial lines
+                pass
+    return out
+
+def enrich_with_sizes(records: list[dict], size_map: dict[int, dict]) -> list[dict]:
+    """
+    Attach length/width (and area) to your historic snapshot records.
+    """
+    out = []
+    for r in records:
+        m = int(r["mmsi"])
+        dims = size_map.get(m, {})
+        L = dims.get("shipLength")
+        B = dims.get("shipWidth")
+        r2 = dict(r)
+        r2["shipLength"] = L
+        r2["shipWidth"]  = B
+        # choose a footprint model; rectangle or ellipse:
+        r2["area_rect_m2"]  = (L * B) if (L and B) else None
+        r2["area_ellip_m2"] = (0.785 * L * B) if (L and B) else None
+        out.append(r2)
+    return out
+
+#................#
+
+
+
+
 # AOI (bbox or polygon)
 BBOX       = (62.88, 7.61, 63.17, 8.13)  # (minLat, minLon, maxLat, maxLon) 63.50, 9.41, 63.71, 10.13
 BBOX_ORDER = "latlon"
@@ -123,6 +187,12 @@ def snapshot_records(token, aoi_poly, T, delta_min):
             if not aoi_prepared.contains(Point(float(lon), float(lat))):
                 continue
             records.append(p)
+
+
+    mmsis = {int(r["mmsi"]) for r in records}
+    sizes = fetch_sizes_for_mmsis(token, mmsis, max_seconds=6)  # short peek at the stream
+    records = enrich_with_sizes(records, sizes)
+
     return records
 
 def plot_positions(records: List[dict]):
@@ -161,6 +231,7 @@ def main():
     T = datetime.fromisoformat(T_ISO.replace("Z","+00:00")).astimezone(timezone.utc)
 
     records = snapshot_records(token, aoi, T, DELTA_MIN)
+
     print(records)
     print(f"[info] Snapshot records: {len(records)} vessels")
 
