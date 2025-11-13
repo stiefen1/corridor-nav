@@ -24,7 +24,7 @@ import datetime as dt
 from weather.weather_build_helpers import WeatherClient as wc
 
 
-lat, lon = 60.10, 5.00  # Trondheim
+lat, lon = 63.15, 7.75  # Alesund
 
 csv_read = True
 
@@ -32,12 +32,12 @@ csv_read = True
 
 if csv_read:
     ####### To use the CSV instead #####
-    when = dt.datetime(2025, 11, 11, 23, 0, 0)  # YYYY, MM, DD, HH, MM, SS
+    when = dt.datetime(2025, 11, 12, 0, 0, 0)  # YYYY, MM, DD, HH, MM, SS
     wc = wc(
         user_agent="Replay/1.0",
         mode="none",                    # stop hitting live APIs
         source="archive",
-        archive_csv="met_stream.csv"
+        archive_csv="src/weather/data/kristiansund_weather.csv"
     )
     sample = wc.get(when_utc=when, lat=lat, lon=lon)
 
@@ -47,7 +47,7 @@ else:
         user_agent="ecdisAPP/1.0 ecdis@example.com",
         mode="met",
         source="live",
-        archive_csv="met_stream.csv"
+        archive_csv="src/weather/data/kristiansund_weather.csv"
         )
     sample = wc.get(when, lat=lat, lon=lon)
 
