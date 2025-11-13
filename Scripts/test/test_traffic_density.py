@@ -122,9 +122,9 @@ def main():
     lon_max, lat_max = TO_WGS(x_max, y_max)
     aoi = bbox_to_polygon((lat_min, lon_min, lat_max, lon_max), "latlon")
 
-    token = get_token()
+    #token = get_token()
     T = datetime.fromisoformat(TIME_ISO.replace("Z", "+00:00")).astimezone(timezone.utc)
-    records = snapshot_records(token, aoi, T, DELTA_MIN)
+    records = snapshot_records(aoi, T)
 
     # 3) Load all corridors
     corridors = Corridor.load_all_corridors_in_folder(CORRIDOR_DIR)
@@ -149,16 +149,10 @@ def main():
         res = TrafficDensityCalculator.evaluate_density_for_corridor(
             corridor_obj=corridor,
             ais_records=records,
-            to_metric=TO_METRIC,
-            to_wgs84=TO_WGS,            # optional
             buffer_m=BUFFER_M,
             d_min=D_MIN,
             D_max=D_MAX,
-            area_shape_factor=AREA_SHAPE_FACTOR,
-            overlap_fraction=OVERLAP_F,
-            impute_area_m2=IMPUTE_AREA_M2,
-            include_boundary=INCLUDE_BOUNDARY,
-            debug=False,
+            impute_area_m2=IMPUTE_AREA_M2
         )
 
         print(f"id={corridor.id}  density={res['density']}  used={res['ships_used_in_sum']:>3}  total={res['ships_total_considered']:>3}")

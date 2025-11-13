@@ -166,7 +166,8 @@ def fetch_track_segment(token, mmsi, T, delta_min):
     r.raise_for_status()
     return r.json()
 
-def snapshot_records(token, aoi_poly, T, delta_min):
+def snapshot_records(aoi_poly, T, delta_min=15):
+    token = get_token()
     aoi_geojson = {"type": "Polygon", "coordinates": [list(aoi_poly.exterior.coords)]}
     mmsis = mmsi_in_area_at_time(token, aoi_geojson, T, delta_min)
     aoi_prepared = prep(aoi_poly)

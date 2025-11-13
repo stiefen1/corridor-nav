@@ -11,12 +11,14 @@ from weather.weather_helpers import WeatherSample, WeatherClient
 from traffic.ships import TargetShip
 from risk.model import RiskModel
 import datetime as dt, networkx as nx
+from traffic.traffic_density_eval import TrafficDensityCalculator
 
 
 class Planner:
     def __init__(
         self,
         corridors: List[Corridor],
+        # records: List[dict],
         target_node: int, # One of the main nodes
         energy_estimator: Optional[EnergyEstimator] = None,
         force_estimator: Optional[ForceEstimator] = None,
@@ -26,6 +28,7 @@ class Planner:
         mu: float = 1 # cost function weight: cost = risk + mu * energy_cons
     ):
         self.graph_of_corridors = GraphOfCorridors(corridors)
+        # self.records = records
         self.target_node = target_node
         self.energy_estimator = energy_estimator or EnergyEstimator()
         self.force_estimator = force_estimator or ForceEstimator()
@@ -92,6 +95,7 @@ class Planner:
                 energy_cons = self.energy_estimator.get(corridor, u, forces, travel_time)
 
                 # Traffic
+                # traffic_density = TrafficDensityCalculator.evaluate_density_for_corridor(corridor_obj=corridor, ais_records=self.records)
                 traffic_density = 1e-3 # TODO: Evaluate traffic density
 
                 # Risk = Expected travel time

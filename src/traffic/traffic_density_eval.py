@@ -4,8 +4,14 @@ import numpy as np
 from shapely import Polygon as ShapelyPolygon
 from corridor_opt.geometry import GeometryWrapper
 
+from pyproj import Transformer
+
+
 
 XY = List[Tuple[float, float]]
+
+TO_METRIC = Transformer.from_crs(4326, 32633, always_xy=True).transform  # lon/lat -> x/y (UTM33N)
+TO_WGS = Transformer.from_crs(32633, 4326, always_xy=True).transform     # x/y (UTM33N) -> lon/lat
 
 class TrafficDensityCalculator:
     """
@@ -204,12 +210,12 @@ class TrafficDensityCalculator:
         corridor_obj,
         ais_records: list,
         *,
-        to_metric,               # callable(lon, lat) -> (x, y)
-        to_wgs84=None,           # optional callable(x, y) -> (lon, lat)
+        to_metric=TO_METRIC,               # callable(lon, lat) -> (x, y)
+        to_wgs84=TO_WGS,           # optional callable(x, y) -> (lon, lat)
         buffer_m: float = 500.0,
         d_min: float = 10.0,
         D_max: float = 1000.0,
-        area_shape_factor: float = 0.85,
+        area_shape_factor: float = 1.0,
         overlap_fraction: float = 1.0,
         impute_area_m2: Optional[float] = 1500.0,
         include_boundary: bool = True,
