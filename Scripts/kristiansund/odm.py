@@ -98,7 +98,6 @@ planner = Planner(
     corridors,
     target_node,
     # records,
-    40696,
     mu=1e-5
 )
 
