@@ -32,8 +32,22 @@ class Planner:
         self.target_node = target_node
         self.energy_estimator = energy_estimator or EnergyEstimator()
         self.force_estimator = force_estimator or ForceEstimator()
-        self.weather_client = weather_client or WeatherClient(user_agent="ecdisAPP/1.0 ecdis@example.com", mode="met", grid_deg=0.01)
-        self.ais_client = ais_client or ... # TODO: Create AIS object to query data from
+        self.weather_client = weather_client or WeatherClient(user_agent="ecdisAPP/1.0 ecdis@example.com", mode="met", grid_deg=0.01) # TODO: Replace with new version
+        # self.ais_client = ais_client or ... # TODO: Create AIS object to query data from
+        # res = TrafficDensityCalculator.evaluate_density_for_corridor(
+        #     corridor_obj=corridor,
+        #     ais_records=records,
+        #     to_metric=TO_METRIC,
+        #     to_wgs84=TO_WGS,            # optional
+        #     buffer_m=BUFFER_M,
+        #     d_min=D_MIN,
+        #     D_max=D_MAX,
+        #     area_shape_factor=AREA_SHAPE_FACTOR,
+        #     overlap_fraction=OVERLAP_F,
+        #     impute_area_m2=IMPUTE_AREA_M2,
+        #     include_boundary=INCLUDE_BOUNDARY,
+        #     debug=False,
+        # )
         self.risk_model = risk_model or RiskModel()
         self.mu = mu
 
@@ -46,14 +60,14 @@ class Planner:
             ship_nominal_tracking_accuracy: float, # Tracking accuracy without any external forces
             disable_wave: bool = False,
             weight: Literal['risk', 'energy', 'total'] = 'total'
-        ) -> List[Corridor]:
+        ) -> Tuple[List, float, List[Corridor]]:
         """
         Returns the optimal sequence of corridor to reach self.goal according to a risk model that accounts for target ships, weather and own ship states.
         """
 
         self.set_costs(u, when_utc, ship_nominal_maneuverability, ship_nominal_tracking_accuracy, disable_wave=disable_wave)
         path_nodes, total_distance, corridors_used = self.graph_of_corridors.find_shortest_path(start_node, self.target_node, weight=weight)
-        return corridors_used
+        return path_nodes, total_distance, corridors_used
 
     def set_costs(
             self,
@@ -86,7 +100,7 @@ class Planner:
                 travel_time = corridor.backbone.length / u # distance / speed
 
                 # Get weather sample at corridor's centroid
-                weather_sample = self.weather_client.get(when_utc, east=east, north=north)
+                weather_sample = self.weather_client.get(when_utc, east=east, north=north) # TODO: Replace with new version
 
                 # Environmental forces
                 forces = self.force_estimator.get(u, psi, weather_sample, degrees=False, disable_wave=disable_wave)

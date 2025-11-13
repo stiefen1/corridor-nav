@@ -12,6 +12,7 @@ if __name__ == "__main__":
     
     # Load corridor from txt files
     corridors = Corridor.load_all_corridors_in_folder(path_to_corridors)
+    corridors[0].get_xy_as_list()
 
     _, ax = plt.subplots()
 

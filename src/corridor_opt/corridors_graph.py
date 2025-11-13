@@ -1,6 +1,6 @@
 import networkx as nx
 from corridor_opt.corridor import Corridor
-from typing import List
+from typing import List, Tuple
 
 class GraphOfCorridors(nx.MultiDiGraph):
     def __init__(
@@ -175,7 +175,7 @@ class GraphOfCorridors(nx.MultiDiGraph):
             corridor_ids = [c.idx for c in corridors]
             print(f"Edge ({u}->{v}, key={key}): {len(corridors)} corridors {corridor_ids} ({direction})")
     
-    def find_shortest_path(self, source: int, target: int, weight: str = 'total'):
+    def find_shortest_path(self, source: int, target: int, weight: str = 'total') -> Tuple[List, float, List[Corridor]]:
         """
         Find shortest path using Dijkstra's algorithm.
         Automatically selects best corridor when multiple exist between nodes.
