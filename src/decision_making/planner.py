@@ -18,7 +18,6 @@ class Planner:
     def __init__(
         self,
         corridors: List[Corridor],
-        # records: List[dict],
         target_node: int, # One of the main nodes
         energy_estimator: Optional[EnergyEstimator] = None,
         force_estimator: Optional[ForceEstimator] = None,
@@ -28,26 +27,11 @@ class Planner:
         mu: float = 1 # cost function weight: cost = risk + mu * energy_cons
     ):
         self.graph_of_corridors = GraphOfCorridors(corridors)
-        # self.records = records
+        self.records = ais_client
         self.target_node = target_node
         self.energy_estimator = energy_estimator or EnergyEstimator()
         self.force_estimator = force_estimator or ForceEstimator()
         self.weather_client = weather_client or WeatherClient(user_agent="ecdisAPP/1.0 ecdis@example.com", mode="met", grid_deg=0.01) # TODO: Replace with new version
-        # self.ais_client = ais_client or ... # TODO: Create AIS object to query data from
-        # res = TrafficDensityCalculator.evaluate_density_for_corridor(
-        #     corridor_obj=corridor,
-        #     ais_records=records,
-        #     to_metric=TO_METRIC,
-        #     to_wgs84=TO_WGS,            # optional
-        #     buffer_m=BUFFER_M,
-        #     d_min=D_MIN,
-        #     D_max=D_MAX,
-        #     area_shape_factor=AREA_SHAPE_FACTOR,
-        #     overlap_fraction=OVERLAP_F,
-        #     impute_area_m2=IMPUTE_AREA_M2,
-        #     include_boundary=INCLUDE_BOUNDARY,
-        #     debug=False,
-        # )
         self.risk_model = risk_model or RiskModel()
         self.mu = mu
 
@@ -109,8 +93,7 @@ class Planner:
                 energy_cons = self.energy_estimator.get(corridor, u, forces, travel_time)
 
                 # Traffic
-                # traffic_density = TrafficDensityCalculator.evaluate_density_for_corridor(corridor_obj=corridor, ais_records=self.records)
-                traffic_density = 1e-3 # TODO: Evaluate traffic density
+                traffic_density = TrafficDensityCalculator.evaluate_density_for_corridor(corridor_obj=corridor, ais_records=self.records)['density']
 
                 # Risk = Expected travel time
                 expected_travel_time = self.risk_model.get(

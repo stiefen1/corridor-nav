@@ -80,15 +80,21 @@ obstacles = get_obstacles_in_window(enc, depth=10)
 target_node = 40696
 u_des = 3 # m/s
 
-# # 2) AIS and Traffic helpers
-# TO_WGS = Transformer.from_crs(32633, 4326, always_xy=True).transform     # x/y (UTM33N) -> lon/lat
-# x_min, y_min, x_max, y_max = enc.bbox
-# lon_min, lat_min = TO_WGS(x_min, y_min)
-# lon_max, lat_max = TO_WGS(x_max, y_max)
-# aoi = bbox_to_polygon((lat_min, lon_min, lat_max, lon_max), "latlon")
-# T_ISO = "2025-10-31T12:00:00Z"
-# time_shot = datetime.fromisoformat(T_ISO.replace("Z", "+00:00")).astimezone(timezone.utc)
-# records = snapshot_records(aoi, time_shot)
+# 2) AIS and Traffic helpers
+TO_WGS = Transformer.from_crs(32633, 4326, always_xy=True).transform     # x/y (UTM33N) -> lon/lat
+x_min, y_min, x_max, y_max = enc.bbox
+lon_min, lat_min = TO_WGS(x_min, y_min)
+lon_max, lat_max = TO_WGS(x_max, y_max)
+aoi = bbox_to_polygon((lat_min, lon_min, lat_max, lon_max), "latlon")
+T_ISO = "2025-10-31T12:00:00Z"
+time_shot = datetime.fromisoformat(T_ISO.replace("Z", "+00:00")).astimezone(timezone.utc)
+records = snapshot_records(aoi, time_shot)
+
+# === Coordinate conversion WGS84 → UTM33N ===
+transformer = Transformer.from_crs(4326, 32633, always_xy=True)
+def wgs84_to_utm33n(lat, lon):
+    x, y = transformer.transform(lon, lat)
+    return x, y
 
 
 
@@ -97,7 +103,7 @@ u_des = 3 # m/s
 planner = Planner(
     corridors,
     target_node,
-    # records,
+    ais_client=records,
     mu=1e-5
 )
 
@@ -130,6 +136,10 @@ while node != target_node:
 
     for corridor in corridors_total:
         corridor.fill(ax=ax, c='orange', alpha=0.7)
+
+    if records:
+        ship_xy = np.array([wgs84_to_utm33n(r["latitude"], r["longitude"]) for r in records])
+        ax.scatter(ship_xy[:,0], ship_xy[:,1], s=18, color='red', label='Ships')
 
     # Plot obstacles
     for obs in obstacles:

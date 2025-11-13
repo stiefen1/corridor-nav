@@ -189,7 +189,7 @@ class TrafficDensityCalculator:
 
         A_avail = max(0.0, A_base - A_occ)
         availability = max(0.0, min(1.0, A_avail / A_base))
-        density = max(0.0, min(1.0, 1.0 - availability))
+        density = max(1e-10, min(1.0, 1.0 - availability))#Fix the 0 part later
 
         out = {
             "base_area": A_base,
@@ -382,7 +382,7 @@ if __name__ == "__main__":
 
     token = get_token()
     aoi = bbox_to_polygon((lat_min, lon_min, lat_max, lon_max), "latlon")
-    records = snapshot_records(token, aoi, T, DELTA_MIN)
+    records = snapshot_records(aoi, T, DELTA_MIN)
 
     # ---------------- Filter ships to expanded corridor ----------------
     calc.collect_ships_in_expanded(records, area_shape_factor=1)
