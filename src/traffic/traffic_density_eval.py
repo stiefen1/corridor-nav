@@ -145,9 +145,9 @@ class TrafficDensityCalculator:
         if self._centerline is None:
             raise RuntimeError("set_centerline_from_corridor() must be called before compute_density().")
 
-        A_exp = float(self.expanded_area)
-        if A_exp <= 0:
-            raise ValueError("Expanded corridor area is non-positive.")
+        A_base = float(self.base_area)
+        if A_base <= 0:
+            raise ValueError("Base corridor area is non-positive.")
 
         from shapely.geometry import Point
         line = self._centerline
@@ -181,12 +181,12 @@ class TrafficDensityCalculator:
             if debug:
                 dbg_rows.append((s.get('mmsi'), 'used', d, w, area))
 
-        A_avail = max(0.0, A_exp - A_occ)
-        availability = max(0.0, min(1.0, A_avail / A_exp))
+        A_avail = max(0.0, A_base - A_occ)
+        availability = max(0.0, min(1.0, A_avail / A_base))
         density = max(0.0, min(1.0, 1.0 - availability))
 
         out = {
-            "expanded_area": A_exp,
+            "base_area": A_base,
             "occupied_effective_area": A_occ,
             "available_area": A_avail,
             "availability": availability,
@@ -339,7 +339,7 @@ if __name__ == "__main__":
     # ---------------- Load corridor ----------------
     path_to_corridors = os.path.join('Scripts', 'kristiansund', 'output', 'corridors_best')
     corridors = Corridor.load_all_corridors_in_folder(path_to_corridors)
-    corridor = corridors[48]
+    corridor = corridors[33]
     corridor_vertices = corridor.get_xy_as_list()
 
     calc = TrafficDensityCalculator(corridor_vertices)
@@ -379,7 +379,7 @@ if __name__ == "__main__":
     records = snapshot_records(token, aoi, T, DELTA_MIN)
 
     # ---------------- Filter ships to expanded corridor ----------------
-    calc.collect_ships_in_expanded(records, area_shape_factor=0.85)
+    calc.collect_ships_in_expanded(records, area_shape_factor=1)
 
     # ---------------- Centerline & density ----------------
     calc.set_centerline_from_corridor(corridor)
