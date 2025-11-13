@@ -7,7 +7,6 @@ from corridor_opt.corridor import Corridor
 from corridor_opt.corridors_graph import GraphOfCorridors
 from power.energy_estimator import EnergyEstimator
 from power.total_force_estimator import ForceEstimator
-# from weather.weather_helpers import WeatherSample, WeatherClient
 from weather.weather_build_helpers import WeatherClient
 from traffic.ships import TargetShip
 from risk.model import RiskModel
