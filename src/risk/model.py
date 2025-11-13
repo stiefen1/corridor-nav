@@ -27,7 +27,7 @@ class RiskModel:
         ) -> float:
 
         # Ship maneuverability <= nominal maneuverability
-        ship_maneuverability = -np.abs(forces[2]) / 1e2 + ship_nominal_maneuverability # TODO: Evaluate ship maneuverability -> f(ship_nominal_maneuverability, forces[2])
+        ship_maneuverability = np.max([-np.abs(forces[2]) / 1e3 + ship_nominal_maneuverability, 0]) # TODO: Evaluate ship maneuverability -> f(ship_nominal_maneuverability, forces[2])
 
         # Ship tracking accuracy <= nominal tracking accuracy
         ship_tracking_accuracy = np.abs(forces[1]) / 1e4 + ship_nominal_tracking_accuracy # TODO: Evaluate tracking accuracy -> f(ship_nominal_tracking_accuracy, forces[1])
@@ -62,6 +62,6 @@ class RiskModel:
         # print(prob_powered_exit_bad_tracking, prob_powered_exit_colav)
 
         # Expected travel time
-        expected_travel_time = prob_collision * self.t_collision + prob_grounding * self.t_grounding + (1-prob_collision-prob_grounding) * travel_time
+        expected_travel_time = travel_time # prob_collision * self.t_collision + prob_grounding * self.t_grounding + (1-prob_collision-prob_grounding) * travel_time
 
         return expected_travel_time

@@ -112,6 +112,21 @@ class ForceEstimator:
         Compute the maximal steady-state turning rate value for a given surge speed, heading and weather sample.
         """
         return 0
+    
+    def maneuverability(self, u: float = 3, vr: float = 0) -> float:
+        """
+        dr/ddelta
+        """
+        import sympy
+        r, delta = sympy.symbols('r delta')
+        expr = np.array([
+            [-self.ship_params.tv, (self.ship_params.mass-self.ship_params.x_du) * u - self.ship_params.tr],
+            [(self.ship_params.tu-self.ship_params.y_dv) * u - self.ship_params.kv, (self.ship_params.mass*self.ship_params.x_g) - self.ship_params.kr]
+        ]) * np.array([vr, r]).reshape(2,1) - np.array([1, 1]) * delta
+        
+
+
+
 
     def get(
             self,
