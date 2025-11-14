@@ -86,7 +86,6 @@ class Planner:
 
                 # Get weather sample at corridor's centroid
                 weather_sample = self.weather_client.get(when_utc, east=east, north=north)
-                print(weather_sample)
 
                 # Environmental forces
                 forces = self.force_estimator.get(u, psi, weather_sample, degrees=False, disable_wave=disable_wave)
