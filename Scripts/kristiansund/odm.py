@@ -63,12 +63,12 @@ print(f"Found {len(corridors)} corridors")
 corridors[0].area
 
 # Visualize nodes
-# _, ax = plt.subplots()
-# for corridor in corridors:
-#     corridor.plot(ax=ax)
-#     ax.text(*corridor.centroid, s=f"{corridor.prev_main_node}, {corridor.next_main_node}")
-# plt.show()
-# plt.close()
+_, ax = plt.subplots()
+for corridor in corridors:
+    corridor.plot(ax=ax)
+    ax.text(*corridor.centroid, s=f"{corridor.prev_main_node}, {corridor.next_main_node}")
+plt.show()
+plt.close()
 
 
 # Load obstacles from enc
@@ -86,9 +86,10 @@ x_min, y_min, x_max, y_max = enc.bbox
 lon_min, lat_min = TO_WGS(x_min, y_min)
 lon_max, lat_max = TO_WGS(x_max, y_max)
 aoi = bbox_to_polygon((lat_min, lon_min, lat_max, lon_max), "latlon")
-T_ISO = "2025-10-31T12:00:00Z"
-time_shot = datetime.fromisoformat(T_ISO.replace("Z", "+00:00")).astimezone(timezone.utc)
-records = snapshot_records(aoi, time_shot)
+# T_ISO = "2025-10-31T12:00:00Z"
+# time_shot = datetime.fromisoformat(T_ISO.replace("Z", "+00:00")).astimezone(timezone.utc)
+t = dt.datetime(2025, 11, 11, 12).astimezone(timezone.utc)
+# records = snapshot_records(aoi, t)
 
 # === Coordinate conversion WGS84 → UTM33N ===
 transformer = Transformer.from_crs(4326, 32633, always_xy=True)
@@ -97,25 +98,21 @@ def wgs84_to_utm33n(lat, lon):
     return x, y
 
 
-
-
-
 planner = Planner(
     corridors,
     target_node,
-    ais_client=records,
+    ais_client=None,
     mu=1e-5
 )
 
-node = 1343
-t = dt.datetime(2025, 11, 11)
+
+node = 8636
 while node != target_node:
+    planner.records = snapshot_records(aoi, t)
     nodes, distance, corridors_total = planner.get_optimal_corridor_sequence(
         start_node=node,
         u=u_des,
-        when_utc=dt.datetime(2025, 11, 12, 0, 0, 0), #dt.datetime.now(dt.UTC),
-        ship_nominal_maneuverability=1e3,
-        ship_nominal_tracking_accuracy=5,
+        when_utc=t,
         disable_wave=True,
         weight='total'
     )
@@ -137,8 +134,8 @@ while node != target_node:
     for corridor in corridors_total:
         corridor.fill(ax=ax, c='orange', alpha=0.7)
 
-    if records:
-        ship_xy = np.array([wgs84_to_utm33n(r["latitude"], r["longitude"]) for r in records])
+    if planner.records:
+        ship_xy = np.array([wgs84_to_utm33n(r["latitude"], r["longitude"]) for r in planner.records])
         ax.scatter(ship_xy[:,0], ship_xy[:,1], s=18, color='red', label='Ships')
 
     # Plot obstacles

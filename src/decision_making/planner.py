@@ -10,7 +10,7 @@ from power.total_force_estimator import ForceEstimator
 from weather.weather_build_helpers import WeatherClient
 from traffic.ships import TargetShip
 from risk.model import RiskModel
-import datetime as dt, networkx as nx
+import datetime as dt, networkx as nx, numpy as np
 from traffic.traffic_density_eval import TrafficDensityCalculator
 
 
@@ -36,13 +36,53 @@ class Planner:
         self.risk_model = risk_model or RiskModel()
         self.mu = mu
 
+
+    def print_statistics(
+            self,
+            u: float, # Surge speed
+            when_utc: dt.datetime, # current time
+            disable_wave: bool = False,
+    ) -> None:
+        values = {
+            "torque": [],
+            "sway_force": [],
+            "traffic": [],
+            "width": []
+        }
+        for corridor in self.graph_of_corridors.corridors:
+            # Get corridor's coordinates
+            east, north = corridor.centroid
+
+            # Get average orientation in the corridor
+            psi = corridor.average_orientation()
+
+            # Travel time
+            travel_time = corridor.backbone.length / u # distance / speed
+
+            # Get weather sample at corridor's centroid
+            weather_sample = self.weather_client.get(when_utc, east=east, north=north)
+
+            # Environmental forces
+            forces = self.force_estimator.get(u, psi, weather_sample, degrees=False, disable_wave=disable_wave)
+
+
+            # Traffic
+            traffic_density = TrafficDensityCalculator.evaluate_density_for_corridor(corridor_obj=corridor, ais_records=self.records)['density']
+            values["torque"].append(abs(forces[2]))
+            values["sway_force"].append(abs(forces[1]))
+            values["traffic"].append(traffic_density)
+            values["width"].append(corridor.width)
+
+        for key, val in zip(values.keys(), values.values()):
+            print(f"{key}:\t Mean: {np.mean(val)}\t Mean-std: {np.mean(val)-np.std(val)}\t Mean+std: {np.mean(val)+np.std(val)}\t min: {np.min(val)}\t max: {np.max(val)}")
+
+
+
     def get_optimal_corridor_sequence(
             self,
             start_node: int,
             u: float, # Surge speed
             when_utc: dt.datetime, # current time
-            ship_nominal_maneuverability: float, # Maneuverability without any external forces
-            ship_nominal_tracking_accuracy: float, # Tracking accuracy without any external forces
             disable_wave: bool = False,
             weight: Literal['risk', 'energy', 'total'] = 'total'
         ) -> Tuple[List, float, List[Corridor]]:
@@ -50,7 +90,7 @@ class Planner:
         Returns the optimal sequence of corridor to reach self.goal according to a risk model that accounts for target ships, weather and own ship states.
         """
 
-        self.set_costs(u, when_utc, ship_nominal_maneuverability, ship_nominal_tracking_accuracy, disable_wave=disable_wave)
+        self.set_costs(u, when_utc, disable_wave=disable_wave)
         path_nodes, total_distance, corridors_used = self.graph_of_corridors.find_shortest_path(start_node, self.target_node, weight=weight)
         return path_nodes, total_distance, corridors_used
 
@@ -58,8 +98,6 @@ class Planner:
             self,
             u: float, # Surge speed
             when_utc: dt.datetime, 
-            ship_nominal_maneuverability: float, # Maneuverability without any external forces
-            ship_nominal_tracking_accuracy: float, # Tracking accuracy without any external forces
             disable_wave: bool = False
         ) -> None:
         """
@@ -101,9 +139,7 @@ class Planner:
                     travel_time,
                     traffic_density,
                     forces,
-                    corridor.width,
-                    ship_nominal_maneuverability,
-                    ship_nominal_tracking_accuracy
+                    corridor.width
                 )
 
 
