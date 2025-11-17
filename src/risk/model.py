@@ -1,7 +1,21 @@
 """
 Goal: compute risk associated to a corridor given wave, current, wind, traffic density and own ship's parameters.
+
+Traffic density, maneuverability and lateral (sway) force are classified as either LOW, MEDIUM, HIGH using two thresholds each.
+
+
 """
-import numpy as np
+
+TD_THRESH = (1e-5, 1e-4)
+MAN_THRESH = (1e3, 1e4)
+SWAY_THRESH = (1e3, 1e4)
+STATES = ('L', 'M', 'H')
+
+
+import numpy as np, pandas as pd, os, pathlib
+from typing import Literal
+
+
 
 class RiskModel:
     def __init__(
@@ -22,16 +36,15 @@ class RiskModel:
             traffic_density: float,
             forces: np.ndarray,
             width: float,
-            ship_nominal_maneuverability: float, # 
+            ship_nominal_max_psi_force: float, # 
             ship_nominal_tracking_accuracy: float # +- meters
         ) -> float:
 
-        # Ship maneuverability <= nominal maneuverability
-        ship_maneuverability = np.max([-np.abs(forces[2]) / 1e3 + ship_nominal_maneuverability, 0]) # TODO: Evaluate ship maneuverability -> f(ship_nominal_maneuverability, forces[2])
+        # We define maneuverability as the maximum force the ship can generate
+        maneuverability = np.max([ship_nominal_max_psi_force - np.abs(forces[2]), 0]) # Maximum force ship can generate 
 
         # Ship tracking accuracy <= nominal tracking accuracy
-        ship_tracking_accuracy = np.abs(forces[1]) / 1e4 + ship_nominal_tracking_accuracy # TODO: Evaluate tracking accuracy -> f(ship_nominal_tracking_accuracy, forces[1])
-
+        prob_powered_exit_bad_tracking = ...
         # print(f"tracking accuracy: {ship_tracking_accuracy} | ship maneuverability: {ship_maneuverability} | forces[2]: {forces[2]}")
 
         # Actual width
@@ -65,3 +78,44 @@ class RiskModel:
         expected_travel_time = travel_time # prob_collision * self.t_collision + prob_grounding * self.t_grounding + (1-prob_collision-prob_grounding) * travel_time
 
         return expected_travel_time
+    
+class BBN:
+    powered_exit_tracking_table: pd.DataFrame
+    powered_exit_colav_table: pd.DataFrame
+    powered_collision_table: pd.DataFrame
+    
+    def __init__(
+        self,
+        powered_exit_tracking_src: str = os.path.join(pathlib.Path(__file__).parent, 'prob_power_exit_tracking.csv'),
+        powered_exit_colav_src: str = os.path.join(pathlib.Path(__file__).parent, 'prob_power_exit_colav.csv'),
+        powered_collision_src: str = os.path.join(pathlib.Path(__file__).parent, 'prob_power_collision.csv'),
+    ):
+        (self.powered_exit_tracking_table, self.powered_exit_colav_table, self.powered_collision_table) = [pd.read_csv(p, delimiter=';') for p in (powered_exit_tracking_src, powered_exit_colav_src, powered_collision_src)]
+
+    def prob_powered_exit_tracking(self, width: Literal['L', 'M', 'H'], sway_force: Literal['L', 'M', 'H']) -> float:
+        """
+        Convert width and sway force status into a probability of powered exit tracking based on tables.
+
+        'L' = 'Low'
+        'M' = 'Medium'
+        'H' = 'High'
+        """
+        assert width in STATES, f"width must be one of the following str: {STATES}. Got width={width}."
+        assert sway_force in STATES, f"sway_force must be one of the following str: {STATES}. Got sway_force={sway_force}."
+        return self.powered_exit_tracking_table.loc[(self.powered_exit_tracking_table['width'] == 'L') & (self.powered_exit_tracking_table['sway-force'] == 'M'), 'p(exit)'].iloc[0]
+    
+    def prob_powered_exit_colav(self, traffic: Literal['L', 'M', 'H'], maneuverability: Literal['L', 'M', 'H']) -> float:
+        assert traffic in STATES, f"traffic must be one of the following str: {STATES}. Got traffic={traffic}."
+        assert maneuverability in STATES, f"maneuverability must be one of the following str: {STATES}. Got maneuverability={maneuverability}."
+        return self.powered_exit_colav_table.loc[(self.powered_exit_colav_table['traffic'] == 'L') & (self.powered_exit_colav_table['maneuverability'] == 'M'), 'p(exit)'].iloc[0]
+    
+    def prob_powered_collision(self, traffic: Literal['L', 'M', 'H'], maneuverability: Literal['L', 'M', 'H']) -> float:
+        assert traffic in STATES, f"traffic must be one of the following str: {STATES}. Got traffic={traffic}."
+        assert maneuverability in STATES, f"maneuverability must be one of the following str: {STATES}. Got maneuverability={maneuverability}."
+        return self.powered_collision_table.loc[(self.powered_collision_table['traffic'] == 'L') & (self.powered_collision_table['maneuverability'] == 'M'), 'p(collision)'].iloc[0]
+
+if __name__ == "__main__":
+    bbn = BBN()
+    print(bbn.prob_powered_exit_tracking('L', 'M'))
+    print(bbn.prob_powered_exit_colav('L', 'M'))
+    print(bbn.prob_powered_collision('L', 'M'))
