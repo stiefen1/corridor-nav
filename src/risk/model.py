@@ -72,7 +72,6 @@ class RiskModel:
         )
 
         ## Total 
-        print(prob_powered_collision, prob_powered_exit_bad_tracking, prob_powered_exit_colav)
         prob_powered_exit = prob_powered_exit_bad_tracking + prob_powered_exit_colav
         prob_drifting_exit = 0
 

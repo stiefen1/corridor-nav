@@ -142,7 +142,6 @@ class Planner:
                     corridor.width
                 )
 
-
                 cost = expected_travel_time + self.mu * energy_cons
                 costs.update({
                     corridor: cost
