@@ -29,7 +29,7 @@ from corridor_opt.extract_shoreline import get_obstacles_in_window
 from corridor_opt.corridor import Corridor
 
 from traffic.ais import snapshot_records, get_token, bbox_to_polygon
-from traffic.traffic_density_eval import TrafficDensityCalculator
+from traffic.traffic_density_eval import TrafficDensityCalculator, plot_ais_ships
 
 # ----------------------------
 # Config & tuning knobs
@@ -125,6 +125,7 @@ def main():
     #token = get_token()
     T = datetime.fromisoformat(TIME_ISO.replace("Z", "+00:00")).astimezone(timezone.utc)
     records = snapshot_records(aoi, T)
+    print(records)
 
     # 3) Load all corridors
     corridors = Corridor.load_all_corridors_in_folder(CORRIDOR_DIR)
@@ -136,6 +137,7 @@ def main():
 
     # Plot ships once (not per corridor)
     _plot_ships(ax, records)
+    plot_ais_ships(ax, records)
 
     # 5) Loop corridors: compute density and draw corridor/backbone/centroid
     color_cache: Dict[Tuple[int, int], Tuple[float, float, float]] = {}

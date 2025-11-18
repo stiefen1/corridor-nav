@@ -318,6 +318,145 @@ def _color_by_weight(ws: np.ndarray) -> np.ndarray:
 
 
 
+from matplotlib.patches import Polygon
+
+class ShipDraw:
+    ''' This class is used to calculate the coordinates of each
+        corner of a ship seen from above, and rotate and translate
+        the coordinates according to the ship heading and position
+    '''
+    def __init__(self, l=80.0, b=20.0):
+        # length and beam in meters
+        self.l = float(l)
+        self.b = float(b)
+
+    def local_coords(self):
+        ''' Ship pointing along local x-axis with its center (midship)
+            at the origin.
+
+            1: left back corner
+            2: left starting point of bow curvature
+            3: bow
+            4: right starting point of bow curve
+            5: right back corner
+        '''
+        x1, y1 = -self.l / 2, -self.b / 2
+        x2, y2 =  self.l / 4, -self.b / 2
+        x3, y3 =  self.l / 2,  0.0
+        x4, y4 =  self.l / 4,  self.b / 2
+        x5, y5 = -self.l / 2,  self.b / 2
+
+        x = np.array([x1, x2, x3, x4, x5, x1])
+        y = np.array([y1, y2, y3, y4, y5, y1])
+        return x, y
+
+    def rotate_coords(self, x, y, psi):
+        ''' Rotates the ship an angle psi (radians) '''
+        x_t = np.cos(psi) * x - np.sin(psi) * y
+        y_t = np.sin(psi) * x + np.cos(psi) * y
+        return x_t, y_t
+
+    def translate_coords(self, x_ned, y_ned, north, east):
+        ''' Translates NED-frame coordinates by (north, east) '''
+        x_t = x_ned + east   # x = East
+        y_t = y_ned + north  # y = North
+        return x_t, y_t
+
+
+def ais_angle_to_psi_rad(record):
+    """
+    Convert AIS heading / COG to psi [rad] for ShipDraw.rotate_coords.
+
+    AIS 'trueHeading' and 'courseOverGround' are:
+        - degrees from true North
+        - increasing clockwise
+
+    ShipDraw expects:
+        - radians from +x-axis (East)
+        - increasing counter-clockwise
+    """
+    hdg = record.get("trueHeading")
+    cog = record.get("courseOverGround")
+
+    # AIS: 511 means "no heading information"
+    if hdg is not None and hdg != 511:
+        theta_deg = hdg
+    else:
+        theta_deg = cog
+
+    if theta_deg is None:
+        # fallback if data is bad; you can also 'return None' and skip
+        return 0.0
+
+    # Convert: from North CW deg → East CCW rad
+    psi = np.deg2rad(90.0 - theta_deg)
+
+    # Normalize to [-pi, pi] (optional but nice)
+    psi = np.arctan2(np.sin(psi), np.cos(psi))
+    return psi
+
+
+def get_ship_dimensions(record, default_L=80.0, default_B=20.0):
+    """
+    Get length/beam from AIS record, fallback to defaults if missing.
+    """
+    L = record.get("shipLength") or default_L
+    B = record.get("shipWidth")  or default_B
+    return float(L), float(B)
+
+# === Coordinate conversion WGS84 → UTM33N ===
+transformer = Transformer.from_crs(4326, 32633, always_xy=True)
+def wgs84_to_utm33n(lat, lon):
+    x, y = transformer.transform(lon, lat)
+    return x, y
+
+def plot_ais_ships(ax, records):
+    """
+    Draw AIS targets as ship-shaped polygons on the given axes.
+
+    records: list of AIS dicts like the ones from your API.
+    Uses:
+      - latitude / longitude → wgs84_to_utm33n
+      - trueHeading / courseOverGround → psi
+      - shipLength / shipWidth → polygon size
+    """
+    first = True  # for legend label
+
+    for rec in records:
+        # 1) Position: WGS84 -> UTM33N (x = East, y = North)
+        east, north = wgs84_to_utm33n(rec["latitude"], rec["longitude"])
+
+        # 2) Orientation from AIS
+        psi = ais_angle_to_psi_rad(rec)
+
+        # 3) Ship size (L/B) from AIS, with defaults
+        L, B = get_ship_dimensions(rec)
+
+        # 4) Build ship shape in local frame
+        ship = ShipDraw(l=L, b=B)
+        x_local, y_local = ship.local_coords()
+
+        # 5) Rotate and translate to world coordinates
+        x_rot, y_rot = ship.rotate_coords(x_local, y_local, psi)
+        x_world, y_world = ship.translate_coords(x_rot, y_rot, north, east)
+
+        # 6) Create polygon patch
+        coords = np.column_stack((x_world, y_world))
+        poly = Polygon(
+            coords,
+            closed=True,
+            facecolor='black',       # hollow ship
+            edgecolor='black',
+            linewidth=0.7,
+            label='target ships' if first else None
+        )
+        ax.add_patch(poly)
+        first = False
+
+    # Keep aspect ratio correct (important for ships to 'look right')
+    ax.set_aspect('equal', adjustable='box')
+
+
 
 if __name__ == "__main__":
     """
