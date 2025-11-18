@@ -22,7 +22,7 @@ class GraphOfCorridors(nx.MultiDiGraph):
         # First build the edges, assign them to the graph later.
         for corridor in self.corridors:
             n_prev, n_next = corridor.prev_main_node, corridor.next_main_node
-            if n_prev not in vertices:
+            if n_prev not in vertices and corridor.idx == 0:
                 vertices.append(n_prev)
                 self.add_node(n_prev)
 
