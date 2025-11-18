@@ -54,7 +54,12 @@ def create_corridor_colormap(corridors, costs, colormap='viridis'):
     
     return colors, colorbar_info
 
+node = 8636
+target_node = 40696
+u_des = 3 # m/s
 
+start_pos = (1.3317e5, 7.02255e6)
+target_pos = (1.5192e5, 6.99523e6)
 
 # Load corridors
 path_to_corridors = os.path.join(pathlib.Path(__file__).parent, 'output', 'corridors_best')
@@ -62,13 +67,16 @@ corridors = Corridor.load_all_corridors_in_folder(path_to_corridors)
 print(f"Found {len(corridors)} corridors")
 corridors[0].area
 
+
+
+
 # Visualize nodes
-_, ax = plt.subplots()
-for corridor in corridors:
-    corridor.plot(ax=ax)
-    ax.text(*corridor.centroid, s=f"{corridor.prev_main_node}, {corridor.next_main_node}")
-plt.show()
-plt.close()
+# _, ax = plt.subplots()
+# for corridor in corridors:
+#     corridor.plot(ax=ax)
+#     ax.text(*corridor.centroid, s=f"{corridor.prev_main_node}, {corridor.next_main_node}")
+# plt.show()
+# plt.close()
 
 
 # Load obstacles from enc
@@ -77,8 +85,38 @@ enc = ENC(enc_config)
 xlim = enc.bbox[0], enc.bbox[2]
 ylim = enc.bbox[1], enc.bbox[3]
 obstacles = get_obstacles_in_window(enc, depth=10)
-target_node = 40696
-u_des = 3 # m/s
+
+planner = Planner(
+    corridors,
+    target_node,
+    ais_client=None,
+)
+
+# Plot corridors with colors
+fig, ax = plt.subplots(figsize=(7, 7))
+
+for i, obs in enumerate(obstacles):
+    obs.fill(ax=ax, c='forestgreen', label='Seabed at 10m' if i==0 else None)
+    # obs.plot(ax=ax, c='darkgreen')
+
+for j, corridor in enumerate(corridors):
+    corridor.fill(ax=ax, c='peru', alpha=0.7, label='corridors' if j==0 else None)
+
+ax.scatter(*start_pos, c='blue', label='start')
+ax.scatter(*target_pos, c='red', label='goal')
+ax.set_title(f"Area of Kristiansund (NO) - Graph of Corridors (UTM33)")
+ax.set_facecolor('lightsteelblue')
+ax.set_xlim(xlim)
+ax.set_ylim(ylim)
+ax.set_xlabel('East [m]')
+ax.set_ylabel('North [m]')
+ax.set_aspect('equal')
+ax.legend(loc='right', facecolor='white', framealpha=1.0)
+plt.show()
+plt.close()
+
+
+
 
 # 2) AIS and Traffic helpers
 TO_WGS = Transformer.from_crs(32633, 4326, always_xy=True).transform     # x/y (UTM33N) -> lon/lat
@@ -88,7 +126,7 @@ lon_max, lat_max = TO_WGS(x_max, y_max)
 aoi = bbox_to_polygon((lat_min, lon_min, lat_max, lon_max), "latlon")
 # T_ISO = "2025-10-31T12:00:00Z"
 # time_shot = datetime.fromisoformat(T_ISO.replace("Z", "+00:00")).astimezone(timezone.utc)
-t = dt.datetime(2025, 11, 11, 12).astimezone(timezone.utc)
+t = dt.datetime(2025, 11, 12, 8).astimezone(timezone.utc)
 # records = snapshot_records(aoi, t)
 
 # === Coordinate conversion WGS84 → UTM33N ===
@@ -98,15 +136,10 @@ def wgs84_to_utm33n(lat, lon):
     return x, y
 
 
-planner = Planner(
-    corridors,
-    target_node,
-    ais_client=None,
-    mu=1e-5
-)
 
 
-node = 8636
+
+
 while node != target_node:
     planner.records = snapshot_records(aoi, t)
     nodes, distance, corridors_total = planner.get_optimal_corridor_sequence(
@@ -114,7 +147,7 @@ while node != target_node:
         u=u_des,
         when_utc=t,
         disable_wave=True,
-        weight='total'
+        weight='energy'
     )
 
     # Extract all the corridors until the next intersection
@@ -129,18 +162,43 @@ while node != target_node:
     t = t + travel_time
 
     # Plot corridors with colors
-    fig, ax = plt.subplots(figsize=(10, 8))
+    # fig, ax = plt.subplots(figsize=(10, 8))
 
-    for corridor in corridors_total:
-        corridor.fill(ax=ax, c='orange', alpha=0.7)
+    # for corridor in corridors_total:
+    #     corridor.fill(ax=ax, c='orange', alpha=0.7)
+
+    # Plot corridors with colors
+    fig, ax = plt.subplots(figsize=(7, 7))
+
+    for i, obs in enumerate(obstacles):
+        obs.fill(ax=ax, c='forestgreen', label='Seabed at 10m' if i==0 else None)
+
+    for j, corridor in enumerate(corridors_total):
+        corridor.fill(ax=ax, c='peru', alpha=0.7, label='corridors' if j==0 else None)
+
+    ax.scatter(*start_pos, c='blue', label='start')
+    ax.scatter(*target_pos, c='red', label='goal')
 
     if planner.records:
         ship_xy = np.array([wgs84_to_utm33n(r["latitude"], r["longitude"]) for r in planner.records])
-        ax.scatter(ship_xy[:,0], ship_xy[:,1], s=18, color='red', label='Ships')
+        ax.scatter(ship_xy[:,0], ship_xy[:,1], s=18, color='black', label='target ships')
 
-    # Plot obstacles
-    for obs in obstacles:
-        obs.fill(ax=ax, c='forestgreen')
+    ax.set_title(f"Energy-Optimal Sequence of Corridors ({t.strftime('%Y-%m-%d %H:%M')})")
+    ax.set_facecolor('lightsteelblue')
+    ax.set_xlim(xlim)
+    ax.set_ylim(ylim)
+    ax.set_xlabel('East [m]')
+    ax.set_ylabel('North [m]')
+    ax.set_aspect('equal')
+    ax.legend(loc='right', facecolor='white', framealpha=1.0)
+    plt.show()
+    plt.close()
+
+
+
+    # # Plot obstacles
+    # for obs in obstacles:
+    #     obs.fill(ax=ax, c='forestgreen')
 
     ax.set_title(f"T = {t}")
     ax.set_aspect('equal')

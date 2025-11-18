@@ -30,12 +30,16 @@ class RiskModel:
             self,
             t_grounding: float = 1e6,
             t_collision: float = 1e6,
+            cost_grounding: float = 1e6,
+            cost_collision: float = 2e6,
             prob_grounding_given_exit: float = 0.5
         ):
         assert prob_grounding_given_exit < 1.0, f"prob_grounding_given_exit is probability and must hence be < 0. Got {prob_grounding_given_exit:.3f}."
 
         self.t_grounding = t_grounding # travel time after grounding
         self.t_collision = t_collision # travel time after collision
+        self.cost_grounding = cost_grounding
+        self.cost_collision = cost_collision
         self.prob_grounding_given_exit = prob_grounding_given_exit # Probability of grounding given the ship is outside a corridor
         self.bbn = BBN()
 
@@ -45,7 +49,7 @@ class RiskModel:
             traffic_density: float,
             forces: np.ndarray,
             width: float
-        ) -> float:
+        ) -> Tuple[float, float]:
 
         # Probability of collision (power + drifting)
         prob_powered_collision = self.bbn.prob_powered_collision(
@@ -83,10 +87,15 @@ class RiskModel:
         
 
         # Expected travel time
-        expected_travel_time = prob_collision * self.t_collision + prob_grounding * self.t_grounding + (1-prob_collision-prob_grounding) * travel_time
+        # expected_travel_time = prob_collision * self.t_collision + prob_grounding * self.t_grounding + (1-prob_collision-prob_grounding) * travel_time
 
-        return expected_travel_time
-    
+        # Expected cost
+        expected_cost = prob_collision * self.cost_collision + prob_grounding * self.cost_grounding
+
+        print("risk: ", prob_collision * self.cost_collision, prob_grounding * self.cost_grounding)
+
+        # return expected_travel_time
+        return expected_cost, prob_collision + prob_grounding
 class BBN:
     powered_exit_tracking_table: pd.DataFrame
     powered_exit_colav_table: pd.DataFrame

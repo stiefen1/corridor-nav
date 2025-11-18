@@ -24,7 +24,9 @@ class Planner:
         weather_client: Optional[WeatherClient] = None,
         ais_client: Optional[Any] = None,
         risk_model: Optional[RiskModel] = None,
-        mu: float = 1, # cost function weight: cost = risk + mu * energy_cons
+        # mu: float = 1, # cost function weight: cost = risk + mu * energy_cons
+        operational_cost_per_hour: float = 1e1 * 3600, # $ / hour
+        cost_of_energy: float = 1e2, # $ / kWh
         weather_path: str = 'src/weather/data/kristiansund_weather.csv'
     ):
         self.graph_of_corridors = GraphOfCorridors(corridors)
@@ -34,7 +36,9 @@ class Planner:
         self.force_estimator = force_estimator or ForceEstimator()
         self.weather_client = weather_client or WeatherClient(user_agent="Replay/1.0", mode="none", source="archive", archive_csv=weather_path) # mode = met, source = live for live data
         self.risk_model = risk_model or RiskModel()
-        self.mu = mu
+        # self.mu = mu
+        self.operational_cost_per_hour = operational_cost_per_hour
+        self.cost_of_energy = cost_of_energy
 
 
     def print_statistics(
@@ -135,22 +139,38 @@ class Planner:
                 traffic_density = TrafficDensityCalculator.evaluate_density_for_corridor(corridor_obj=corridor, ais_records=self.records)['density']
 
                 # Risk = Expected travel time
-                expected_travel_time = self.risk_model.get(
+                # expected_travel_time = self.risk_model.get(
+                #     travel_time,
+                #     traffic_density,
+                #     forces,
+                #     corridor.width
+                # )
+                risk_cost, prob = self.risk_model.get(
                     travel_time,
                     traffic_density,
                     forces,
                     corridor.width
                 )
 
-                cost = expected_travel_time + self.mu * energy_cons
+                # cost = expected_travel_time + self.mu * energy_cons
+                expected_op_cost = (1-prob) * travel_time * (self.operational_cost_per_hour / 3600)
+                expected_energy_cost = (1-prob) * self.cost_of_energy * (energy_cons / 3.6e6)
+                cost = risk_cost + expected_op_cost + expected_energy_cost
+
+                # print(
+                #     risk_cost, prob,
+                #     expected_energy_cost, self.cost_of_energy,
+                #     expected_op_cost, self.operational_cost_per_second, travel_time
+                # )
+
                 costs.update({
                     corridor: cost
                 })
                 expected_travel_times.update({
-                    corridor: expected_travel_time
+                    corridor: risk_cost
                 })
                 energy_consumption.update({
-                    corridor: energy_cons
+                    corridor: expected_energy_cost
                 })
 
                 # cost_edge += cost
