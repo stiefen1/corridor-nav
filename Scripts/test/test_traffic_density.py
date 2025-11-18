@@ -36,7 +36,7 @@ from traffic.traffic_density_eval import TrafficDensityCalculator
 # ----------------------------
 DEPTH_M = 5
 CONFIG_PATH = os.path.join('config', 'kristiansund.yaml')
-TIME_ISO = "2025-10-31T12:00:00Z"  # UTC ISO
+TIME_ISO = "2025-11-10T13:00:00Z"  # UTC ISO
 DELTA_MIN = 15
 
 # Traffic density knobs
